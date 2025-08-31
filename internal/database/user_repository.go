@@ -64,3 +64,8 @@ func (d *Database) FindUserByEmail(email string) (*models.LoginModel, error) {
 	}
 	return &user, nil
 }
+
+func (d *Database) UpdateUserPassword(email, newPassword string) error {
+    _, err := d.DB.Exec("UPDATE users SET password = $1 WHERE email = $2", newPassword, email)
+    return err
+}

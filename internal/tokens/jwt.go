@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("your_secret_key") // Replace with your secure secret
+var jwtSecret = []byte("Scholarship") // Replace with your secure secret
 
 // GenerateToken creates a JWT token for a user
 func GenerateToken(fullname, email, role string) (string, error) {
@@ -28,7 +28,7 @@ func GenerateToken(fullname, email, role string) (string, error) {
 
 // ParseToken validates and parses a JWT token
 func ParseToken(tokenStr string) (*models.Claims, error) {
-	
+
 	token, err := jwt.ParseWithClaims(tokenStr, &models.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})

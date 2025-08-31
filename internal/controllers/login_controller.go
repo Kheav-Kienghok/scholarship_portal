@@ -6,6 +6,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -53,10 +54,51 @@ func (h *LoginController) Login(c *gin.Context) {
 	// Successful login
 	logging.Info("User logged in", "email", user.Email, "role", user.Role, "ip", c.ClientIP())
 
-	// TODO: Generate JWT or session here and return it instead of just message
+	token, err := tokens.GenerateToken(user.Fullname, user.Email, user.Role)
+	if err != nil {
+		logging.Error("Failed to generate token: " + err.Error())
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
 	utils.JSONIndent(c, http.StatusOK, "Login successful", gin.H{
-		"fullname": user.Fullname,
-		"email":    user.Email,
-		"role":     user.Role,
+		"token": token,
 	})
+}
+
+func (h *LoginController) UpdatePassword(c *gin.Context) {
+
+    var input models.UpdatePasswordInput
+    if err := c.ShouldBindJSON(&input); err != nil {
+        utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+        return
+    }
+
+    // Find user by email
+    user, err := h.DB.FindUserByEmail(input.Email)
+    if err != nil || user == nil {
+        utils.JSONIndent(c, http.StatusUnauthorized, "User not found", nil)
+        return
+    }
+
+    // Check old password
+    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.OldPassword)); err != nil {
+        utils.JSONIndent(c, http.StatusUnauthorized, "Incorrect old password", nil)
+        return
+    }
+
+    // Hash new password
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+    if err != nil {
+        utils.JSONIndent(c, http.StatusInternalServerError, "Failed to hash new password", nil)
+        return
+    }
+
+    // Update password in DB
+    if err := h.DB.UpdateUserPassword(input.Email, string(hashedPassword)); err != nil {
+        utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update password", err.Error())
+        return
+    }
+
+    utils.JSONIndent(c, http.StatusOK, "Password updated successfully", nil)
 }

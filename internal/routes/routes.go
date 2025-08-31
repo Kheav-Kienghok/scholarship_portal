@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +26,8 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 
 		api.POST("/register", registerController.Register)
 		api.POST("/login", loginController.Login)
+
+		api.POST("/update-password", middlewares.JWTAuthMultiple("student", "admin"), loginController.UpdatePassword)
 	}
 
 }

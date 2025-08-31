@@ -57,6 +57,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 		},
 	}
 
-	utils.JSONIndent(c, http.StatusOK, "Registration successful", resp)
+	utils.JSONIndent(c, http.StatusCreated, "Registration successful", resp)
 
 }

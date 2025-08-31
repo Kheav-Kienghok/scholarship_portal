@@ -2,10 +2,13 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/routes"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,9 +27,15 @@ func NewServer(port string, db *database.Database) *Server {
 
 	router := gin.Default()
 	router.Use(logging.GinLogger())
+	router.Use(middlewares.RequestLogger()) // Add your custom middleware here
 
 	// Setup routes
 	routes.SetupRoutes(router, db)
+
+    // Handle unknown paths with JSON 404
+    router.NoRoute(func(c *gin.Context) {
+        utils.JSONIndent(c, http.StatusNotFound, "404 Not Found", nil)
+    })
 
 	return &Server{
 		router: router,
