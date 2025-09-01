@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/auth"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
@@ -23,6 +24,9 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	api := router.Group("/api/v1")
 	{
 		api.GET("/", homeController.GetHome)
+
+		api.GET("/auth/google/login", auth.GoogleLogin)
+		api.GET("/auth/google/callback", auth.GoogleCallback)
 
 		api.POST("/register", registerController.Register)
 		api.POST("/login", loginController.Login)

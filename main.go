@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+
 	// Initialize the logging system
 	if err := logging.InitLogger(); err != nil {
 		log.Fatal("Failed to initialize logger:", err)
