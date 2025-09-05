@@ -1,14 +1,12 @@
 package models
 
-type LoginModel struct {
+type LoginInput struct {
 	Fullname string `json:"fullname"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 	Role     string `json:"role"`
 }
 
-type UpdatePasswordInput struct {
-    Email       string `json:"email" binding:"required,email"`
-    OldPassword string `json:"old_password" binding:"required"`
-    NewPassword string `json:"new_password" binding:"required"`
+type LoginResponse struct {
+	Token string `json:"token"`
 }

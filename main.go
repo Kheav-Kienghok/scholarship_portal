@@ -10,6 +10,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+
+// @title EduVision for Scholarship Portal API
+// @version 1.0
+// @description API documentation for EduVision Scholarship Portal
+// @host localhost:8080
+// @BasePath /api/v1
 func main() {
 
 	// Initialize the logging system

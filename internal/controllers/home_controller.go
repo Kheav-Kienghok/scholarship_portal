@@ -15,7 +15,13 @@ func NewHomeController() *HomeController {
 	return &HomeController{}
 }
 
-// GetHome returns a JSON response with "Hello World"
+// @Summary      Home
+// @Description  Returns the home page
+// @Tags         home
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /api/v1 [get]
 func (h *HomeController) GetHome(c *gin.Context) {
 	// Log the request
 	logging.LogRequest(c.Request.Method, c.Request.URL.Path, c.ClientIP(), http.StatusOK)

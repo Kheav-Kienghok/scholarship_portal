@@ -10,9 +10,10 @@ import (
 var jwtSecret = []byte("Scholarship") // Replace with your secure secret
 
 // GenerateToken creates a JWT token for a user
-func GenerateToken(fullname, email, role string) (string, error) {
+func GenerateToken(id int32, fullname, email, role string) (string, error) {
 
 	claims := models.Claims{
+		ID:       int(id),
 		Fullname: fullname,
 		Email:    email,
 		Role:     role,

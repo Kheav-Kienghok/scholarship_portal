@@ -8,6 +8,7 @@ import (
 
 // Response is a standard API response structure
 type Response struct {
+	Sucess  bool        `json:"success"`
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
@@ -17,6 +18,7 @@ type Response struct {
 func JSONIndent(c *gin.Context, status int, message string, data interface{}) {
 
 	resp := Response{
+		Sucess:  status >= 200 && status < 300,
 		Status:  http.StatusText(status),
 		Message: message,
 		Data:    data,

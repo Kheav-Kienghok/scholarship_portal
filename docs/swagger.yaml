@@ -1,0 +1,99 @@
+basePath: /api/v1
+definitions:
+  models.RegisterModel:
+    properties:
+      fullname:
+        example: John Doe
+        type: string
+      diploma_grade:
+        example: A
+        type: string
+      diploma_year:
+        example: 2025
+        type: integer
+      email:
+        example: john@example.com
+        type: string
+      grade_level:
+        example: 12
+        type: integer
+      high_school:
+        example: Springfield High
+        type: string
+      password:
+        example: supersecret
+        type: string
+      phone_number:
+        example: "+15555555555"
+        type: string
+      role:
+        example: student
+        type: string
+    required:
+    - fullname
+    - email
+    - high_school
+    - password
+    - phone_number
+    type: object
+  models.RegisterResponse:
+    properties:
+      fullname:
+        example: John Doe
+        type: string
+      created_at:
+        example: "2025-09-04T15:30:00Z"
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      updated_at:
+        example: "2025-09-04T15:45:00Z"
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API documentation for EduVision Scholarship Portal
+  title: EduVision for Scholarship Portal API
+  version: "1.0"
+paths:
+  /api/v1:
+    get:
+      consumes:
+      - application/json
+      description: Returns the home page
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Home
+      tags:
+      - home
+  /register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register new user
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RegisterResponse'
+      summary: Register a new user
+      tags:
+      - Auth
+swagger: "2.0"

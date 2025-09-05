@@ -4,13 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"time"
 
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
+
+var jwtSecret = []byte(os.Getenv("JWT_SECRET")) // make sure you set this in .env
 
 func getGoogleOAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
@@ -28,6 +33,7 @@ func getGoogleOAuthConfig() *oauth2.Config {
 func GoogleLogin(c *gin.Context) {
 	cfg := getGoogleOAuthConfig()
 
+	// TODO: generate a random state and store it in session for security
 	url := cfg.AuthCodeURL("state-token", oauth2.AccessTypeOnline)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
@@ -56,5 +62,30 @@ func GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": userInfo})
+	// Create JWT token
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":    userInfo["id"],
+		"email": userInfo["email"],
+		"name":  userInfo["name"],
+		"exp":   time.Now().Add(time.Hour * 72).Unix(), // token expires in 72h
+	})
+
+	tokenString, err := jwtToken.SignedString(jwtSecret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate JWT"})
+		return
+	}
+
+	// Redirect to frontend with JWT token as query param
+	frontendURL := os.Getenv("FRONTEND_URL")
+	redirectURL := frontendURL + "?token=" + url.QueryEscape(tokenString)
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+func GetLoginURL(c *gin.Context) {
+	cfg := getGoogleOAuthConfig()
+	loginURL := cfg.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	c.JSON(http.StatusOK, gin.H{
+		"login_url": loginURL,
+	})
 }

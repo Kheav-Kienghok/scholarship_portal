@@ -1,0 +1,143 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API documentation for EduVision Scholarship Portal",
+        "title": "EduVision for Scholarship Portal API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/api/v1": {
+            "get": {
+                "description": "Returns the home page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "home"
+                ],
+                "summary": "Home",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Register new user",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RegisterModel"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.RegisterResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.RegisterModel": {
+            "type": "object",
+            "required": [
+                "fullname",
+                "email",
+                "high_school",
+                "password",
+                "phone_number"
+            ],
+            "properties": {
+                "diploma_grade": {
+                    "type": "string",
+                    "example": "A"
+                },
+                "diploma_year": {
+                    "type": "integer",
+                    "example": 2025
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "fullname": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "grade_level": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "high_school": {
+                    "type": "string",
+                    "example": "Springfield High"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "supersecret"
+                },
+                "phone_number": {
+                    "type": "string",
+                    "example": "+15555555555"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "student"
+                }
+            }
+        },
+        "models.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-09-04T15:30:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "fullname": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-09-04T15:45:00Z"
+                }
+            }
+        }
+    }
+}
