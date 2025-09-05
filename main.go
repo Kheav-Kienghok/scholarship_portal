@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
@@ -11,19 +12,17 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
-
 func init() {
 	// Check if .env exists
 	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		gin.SetMode(gin.ReleaseMode)
-		} else {
-			if err := godotenv.Load(); err != nil {
-				log.Fatal("Error loading .env file")
-			}
+	} else {
+		if err := godotenv.Load(); err != nil {
+			log.Fatal("Error loading .env file")
 		}
 	}
-	
+}
+
 // @title EduVision for Scholarship Portal API
 // @version 1.0
 // @description API documentation for EduVision Scholarship Portal
@@ -49,14 +48,19 @@ func main() {
 
 	// Run migrations
 	if err := db.Migrate("migrations"); err != nil {
-		log.Fatal("Failed to run migrations:", err)
+
+		if strings.Contains(err.Error(), "does not exist") {
+			log.Println("Migrations folder not found, skipping migrations")
+		} else {
+			log.Fatal("Failed to run migrations:", err)
+		}
 	}
 
 	// Get server port from .env or default to 8080
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-	} 
+	}
 
 	// Create server (Gin engine created here)
 	srv := server.NewServer(port, db)

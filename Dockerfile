@@ -18,6 +18,7 @@ RUN go mod download
 
 # Copy source code
 COPY --chown=builderuser:builderuser . .
+COPY --chown=builderuser:builderuser migrations ./migrations
 
 # Build static binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main main.go
@@ -30,6 +31,7 @@ FROM alpine:3.19 AS debug
 
 WORKDIR /app
 COPY --from=builder /app/main .
+COPY --from=builder /app/migrations ./migrations
 
 # Install some useful debug tools
 RUN apk add --no-cache curl bash
@@ -47,11 +49,9 @@ COPY --from=builder /app/main .
 
 # Create writable dirs
 COPY --from=builder /app/main .
+COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/logs ./logs
 COPY --from=builder /app/.cache ./.cache
-
-# Default Gin mode release
-ENV GIN_MODE=release
 
 USER 1000
 EXPOSE 8080

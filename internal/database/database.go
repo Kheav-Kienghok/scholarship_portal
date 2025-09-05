@@ -51,9 +51,12 @@ func (d *Database) Migrate(migrationsDir string) error {
 	if d.DB == nil {
 		return fmt.Errorf("database not connected")
 	}
+
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
-		return fmt.Errorf("migrations directory does not exist: %s", migrationsDir)
+		logging.Warn(fmt.Sprintf("Migrations directory not found: %s. Skipping migrations.", migrationsDir))
+		return nil // just skip, do not error
 	}
+
 	goose.SetDialect("postgres")
 	err := goose.Up(d.DB, migrationsDir)
 	if err != nil {
