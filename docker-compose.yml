@@ -1,0 +1,31 @@
+services:
+  debug:
+    image: scholarship_portal:debug
+    build:
+      context: .
+      target: debug
+    env_file:
+      - .env
+    volumes:
+      - ./migrations:/app/migrations
+      - ./.env:/app/.env       # Mount .env physically
+    ports:
+      - "8080:8080"
+    tty: true
+    stdin_open: true
+
+  prod:
+    image: scholarship_portal:prod
+    build:
+      context: .
+      target: prod
+    env_file:
+      - .env
+    volumes:
+      - ./migrations:/app/migrations
+      - ./.env:/app/.env       # Mount .env physically
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
+    tty: true
+    stdin_open: true

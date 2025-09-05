@@ -1,0 +1,13 @@
+.vscode/*
+.git/*
+.gitignore
+README.md
+.dockerignore
+.air.toml
+.env
+*.log
+*.md
+*.toml
+*.yml
+*.yaml
+

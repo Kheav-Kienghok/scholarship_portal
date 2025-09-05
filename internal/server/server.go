@@ -22,12 +22,9 @@ type Server struct {
 // NewServer creates a new server instance
 func NewServer(port string, db *database.Database) *Server {
 
-	// Set Gin to release mode in production
-	// gin.SetMode(gin.ReleaseMode)
-
 	router := gin.Default()
 	router.Use(logging.GinLogger())
-	router.Use(middlewares.RequestLogger()) // Add your custom middleware here
+	router.Use(middlewares.RequestLogger()) // Add your custom middleware her
 
 	// Setup routes
 	routes.SetupRoutes(router, db)
