@@ -6,9 +6,6 @@ services:
       target: debug
     env_file:
       - .env
-    volumes:
-      - ./migrations:/app/migrations
-      - ./.env:/app/.env       # Mount .env physically
     ports:
       - "8080:8080"
     tty: true
@@ -22,8 +19,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./migrations:/app/migrations
-      - ./.env:/app/.env       # Mount .env physically
       - ./logs:/app/logs
     ports:
       - "8080:8080"

@@ -85,3 +85,62 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (FindUserBy
 	)
 	return i, err
 }
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+UPDATE users
+SET fullname = $2,
+    phone_number = $3,
+    high_school = $4,
+    grade_level = $5,
+    diploma_year = $6,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, fullname, email, phone_number, high_school, grade_level, diploma_year, role, created_at, updated_at
+`
+
+type UpdateUserProfileParams struct {
+	ID          int32
+	Fullname    string
+	PhoneNumber sql.NullString
+	HighSchool  sql.NullString
+	GradeLevel  sql.NullInt32
+	DiplomaYear sql.NullInt32
+}
+
+type UpdateUserProfileRow struct {
+	ID          int32
+	Fullname    string
+	Email       string
+	PhoneNumber sql.NullString
+	HighSchool  sql.NullString
+	GradeLevel  sql.NullInt32
+	DiplomaYear sql.NullInt32
+	Role        interface{}
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
+	row := q.db.QueryRowContext(ctx, updateUserProfile,
+		arg.ID,
+		arg.Fullname,
+		arg.PhoneNumber,
+		arg.HighSchool,
+		arg.GradeLevel,
+		arg.DiplomaYear,
+	)
+	var i UpdateUserProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Fullname,
+		&i.Email,
+		&i.PhoneNumber,
+		&i.HighSchool,
+		&i.GradeLevel,
+		&i.DiplomaYear,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

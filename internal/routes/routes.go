@@ -7,7 +7,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 
-	// "github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
@@ -41,8 +41,11 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	homeController := controllers.NewHomeController()
 	loginController := controllers.LoginControllerHandler(queries)
 	registerController := controllers.RegisterControllerHandler(queries)
+	userController := controllers.UserControllerHandler(queries)
 
-	// In your routes setup:
+	auth := auth.NewGoogleAuthHandler(queries)
+
+	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API routes
@@ -50,6 +53,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	{
 		api.GET("/", homeController.GetHome)
 
+		// Public auth endpoints
 		api.GET("/auth/google/login", auth.GoogleLogin)
 		api.GET("/auth/google/callback", auth.GoogleCallback)
 		api.GET("/auth/google/url", auth.GetLoginURL)
@@ -57,7 +61,13 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		api.POST("/register", registerController.Register)
 		api.POST("/login", loginController.Login)
 
-		// api.POST("/update-password", middlewares.JWTAuthMultiple("student", "admin"), loginController.UpdatePassword)
+		// Protected endpoints (example: everything below requires auth)
+		protected := api.Group("")
+		protected.Use(middlewares.APIGatewayMiddleware("student", "admin"))
+		{
+			// Add protected routes here, e.g.:
+			protected.POST("/update-profile", userController.UpdateProfile)
+		}
 	}
 
 }
