@@ -1,18 +1,33 @@
 basePath: /api/v1
 definitions:
-  models.RegisterModel:
+  models.LoginRequest:
     properties:
-      fullname:
-        example: John Doe
+      email:
+        example: johndoe@example.com
         type: string
-      diploma_grade:
-        example: A
+      password:
+        example: supersecret
         type: string
+    required:
+    - email
+    - password
+    type: object
+  models.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  models.RegisterInput:
+    properties:
       diploma_year:
         example: 2025
         type: integer
       email:
-        example: john@example.com
+        example: john.doe@example.com
+        type: string
+      fullname:
+        example: John Doe
         type: string
       grade_level:
         example: 12
@@ -21,35 +36,33 @@ definitions:
         example: Springfield High
         type: string
       password:
-        example: supersecret
+        example: SuperSecret123
         type: string
       phone_number:
-        example: "+15555555555"
+        example: +855-17-345-6790
         type: string
-      role:
-        example: student
-        type: string
-    required:
-    - fullname
-    - email
-    - high_school
-    - password
-    - phone_number
     type: object
-  models.RegisterResponse:
+  utils.APIResponse:
     properties:
-      fullname:
-        example: John Doe
+      message:
         type: string
-      created_at:
-        example: "2025-09-04T15:30:00Z"
+      status:
         type: string
-      email:
-        example: john@example.com
+      success:
+        type: boolean
+    type: object
+  utils.Response:
+    properties:
+      data: {}
+      message:
+        example: Login successful
         type: string
-      updated_at:
-        example: "2025-09-04T15:45:00Z"
+      status:
+        example: "200"
         type: string
+      success:
+        example: true
+        type: boolean
     type: object
 host: localhost:8080
 info:
@@ -58,42 +71,51 @@ info:
   title: EduVision for Scholarship Portal API
   version: "1.0"
 paths:
-  /api/v1:
-    get:
+  /login:
+    post:
       consumes:
       - application/json
-      description: Returns the home page
+      parameters:
+      - description: Login user
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Login successful
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Home
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.LoginResponse'
+              type: object
+      summary: Login into user account
       tags:
-      - home
+      - Users
   /register:
     post:
       consumes:
       - application/json
       parameters:
-      - description: Register new user
+      - description: Register user
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/models.RegisterModel'
+          $ref: '#/definitions/models.RegisterInput'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Registration successful
           schema:
-            $ref: '#/definitions/models.RegisterResponse'
+            $ref: '#/definitions/utils.APIResponse'
       summary: Register a new user
       tags:
-      - Auth
+      - Users
 swagger: "2.0"

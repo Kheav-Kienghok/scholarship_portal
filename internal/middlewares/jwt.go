@@ -11,7 +11,9 @@ import (
 
 // JWTAuthMultiple checks for a valid JWT token and one of the allowed roles
 func JWTAuthMultiple(allowedRoles ...string) gin.HandlerFunc {
+
 	return func(c *gin.Context) {
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			utils.JSONIndent(c, http.StatusUnauthorized, "Missing or invalid token", nil)
@@ -28,6 +30,7 @@ func JWTAuthMultiple(allowedRoles ...string) gin.HandlerFunc {
 		}
 
 		if len(allowedRoles) > 0 {
+
 			roleAllowed := false
 			for _, r := range allowedRoles {
 				if claims.Role == r {
@@ -40,6 +43,12 @@ func JWTAuthMultiple(allowedRoles ...string) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+		}
+
+		if c.Request.URL.Path == "/api/v1/admin" && claims.Role != "admin" {
+			utils.JSONIndent(c, http.StatusForbidden, "Admin access required", nil)
+			c.Abort()
+			return
 		}
 
 		// Store claims in context for downstream handlers

@@ -2,13 +2,16 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -25,6 +28,15 @@ func NewGoogleAuthHandler(queries *db.Queries) *GoogleAuthHandler {
 	return &GoogleAuthHandler{Queries: queries}
 }
 
+// generateRandomState creates a URL-safe random string
+func generateRandomState() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // or handle gracefully
+	}
+	return base64.URLEncoding.EncodeToString(b)
+}
+
 func getGoogleOAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -38,10 +50,24 @@ func getGoogleOAuthConfig() *oauth2.Config {
 	}
 }
 
+// func (h *GoogleAuthHandler) GetLoginURL(c *gin.Context) {
+// 	cfg := getGoogleOAuthConfig()
+// 	state := generateRandomState()
+
+// 	loginURL := cfg.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+// 	// loginURL := cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
+// 	utils.JSONIndent(c, http.StatusOK, "Success", gin.H{
+// 		"login_url": loginURL,
+// 	})
+// }
+
 func (h *GoogleAuthHandler) GoogleLogin(c *gin.Context) {
+
 	cfg := getGoogleOAuthConfig()
-	// TODO: generate a random state and store it in session for security
-	url := cfg.AuthCodeURL("state-token", oauth2.AccessTypeOnline)
+	state := generateRandomState()
+
+	url := cfg.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	// url := cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -51,14 +77,16 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
 	token, err := cfg.Exchange(context.Background(), code)
 	if err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Failed to exchange token", err.Error())
+		logging.Error("GOOGLE: Failed to exchange token: ", err)
+		utils.JSONIndent(c, http.StatusBadRequest, "Failed to exchange token", nil)
 		return
 	}
 
 	client := cfg.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Failed to get user info", err.Error())
+		logging.Error("GOOGLE: Failed to get user info:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 	defer resp.Body.Close()
@@ -69,17 +97,22 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to decode user info", nil)
+		logging.Error("GOOGLE: Failed to decode user info:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
 	// Check if user exists
-	if _, err := h.Queries.FindUserByEmail(c, userInfo.Email); err != nil && err != sql.ErrNoRows {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Database error", err.Error())
+	user, err := h.Queries.FindUserByEmail(c, userInfo.Email)
+	if err != nil && err != sql.ErrNoRows {
+		logging.Error("DB: Failed to find user:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
-	} else if err == sql.ErrNoRows {
+	}
+
+	if err == sql.ErrNoRows {
 		// Create user if not exists
-		_, err := h.Queries.CreateUser(c, db.CreateUserParams{
+		_, err = h.Queries.CreateUser(c, db.CreateUserParams{
 			Fullname:     userInfo.Name,
 			Email:        userInfo.Email,
 			PasswordHash: sql.NullString{Valid: false},
@@ -89,35 +122,48 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 			DiplomaYear:  sql.NullInt32{Valid: false},
 		})
 		if err != nil {
-			utils.JSONIndent(c, http.StatusInternalServerError, "Failed to create user", err.Error())
+			logging.Error("DB: Failed to create user:", err)
+			utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+			return
+		}
+
+		// Fetch the user again to get the correct ID
+		user, err = h.Queries.FindUserByEmail(c, userInfo.Email)
+		if err != nil {
+			logging.Error("DB: Failed to fetch user after creation:", err)
+			utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 			return
 		}
 	}
 
-	// Find user to get ID and role for JWT
-	user, err := h.Queries.FindUserByEmail(c, userInfo.Email)
+	// Now user.ID is guaranteed to exist in users table!
+	_, err = h.Queries.UpsertOauthLogin(c, db.UpsertOauthLoginParams{
+		UserID:         sql.NullInt32{Int32: user.ID, Valid: true},
+		Provider:       "google",
+		ProviderUserID: userInfo.ID,
+		AccessToken:    token.AccessToken,
+		RefreshToken:   sql.NullString{String: token.RefreshToken, Valid: token.RefreshToken != ""},
+	})
 	if err != nil {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch data", err.Error())
+		logging.Error("DB: Failed to upsert OAuth login:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
 	// Generate JWT token
 	tokenString, err := tokens.GenerateToken(user.ID, user.Fullname, user.Email, user.Role.(string))
 	if err != nil {
+		logging.Error("JWT: Failed to generate token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
-	// Redirect to frontend with JWT token as query param
-	frontendURL := os.Getenv("FRONTEND_URL")
-	redirectURL := frontendURL + "?token=" + url.QueryEscape(tokenString)
-	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
-}
+	// // Set JWT in HttpOnly cookie for React frontend
+	// c.SetCookie("jwt", tokenString, 3600, "/", "localhost", false, true)
 
-func (h *GoogleAuthHandler) GetLoginURL(c *gin.Context) {
-	cfg := getGoogleOAuthConfig()
-	loginURL := cfg.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	c.JSON(http.StatusOK, gin.H{
-		"login_url": loginURL,
-	})
+	// // Redirect to frontend
+	// c.Redirect(http.StatusTemporaryRedirect, os.Getenv("FRONTEND_URL"))
+
+	frontendURL := os.Getenv("FRONTEND_URL") + "?token=" + url.QueryEscape(tokenString)
+	c.Redirect(http.StatusTemporaryRedirect, frontendURL)
 }

@@ -36,8 +36,10 @@ func ParseToken(tokenStr string) (*models.Claims, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if claims, ok := token.Claims.(*models.Claims); ok && token.Valid {
 		return claims, nil
 	}
+	
 	return nil, jwt.ErrTokenInvalidClaims
 }

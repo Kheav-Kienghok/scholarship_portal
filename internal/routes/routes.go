@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"time"
-
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/auth"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
@@ -27,12 +25,11 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 
 	// CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowOrigins:     []string{"http://localhost:5500"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
 	}))
 
 	dbConn := db.DB // db is *database.Database, db.DB is *sql.DB
@@ -53,19 +50,19 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	{
 		api.GET("/", homeController.GetHome)
 
+		// api.GET("/auth/google/url", auth.GetLoginURL)
+
 		// Public auth endpoints
 		api.GET("/auth/google/login", auth.GoogleLogin)
 		api.GET("/auth/google/callback", auth.GoogleCallback)
-		api.GET("/auth/google/url", auth.GetLoginURL)
 
 		api.POST("/register", registerController.Register)
 		api.POST("/login", loginController.Login)
 
 		// Protected endpoints (example: everything below requires auth)
 		protected := api.Group("")
-		protected.Use(middlewares.APIGatewayMiddleware("student", "admin"))
+		protected.Use(middlewares.JWTAuthMultiple("student", "admin"))
 		{
-			// Add protected routes here, e.g.:
 			protected.POST("/update-profile", userController.UpdateProfile)
 		}
 	}

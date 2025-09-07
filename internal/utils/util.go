@@ -8,10 +8,17 @@ import (
 
 // Response is a standard API response structure
 type Response struct {
-	Sucess  bool        `json:"success"`
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
+	Sucess bool        `json:"success" example:"true"`
+	Status  string      `json:"status" example:"200"`
+	Message string      `json:"message" example:"Login successful"`
 	Data    interface{} `json:"data,omitempty"`
+}
+
+// APIResponse represents a standard JSON response
+type APIResponse struct {
+	Success bool   `json:"success"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 // JSONIndent sends a pretty-printed JSON response using the Response struct

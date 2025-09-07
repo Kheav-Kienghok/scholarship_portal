@@ -15,9 +15,8 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1": {
-            "get": {
-                "description": "Returns the home page",
+        "/login": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -25,17 +24,37 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "home"
+                    "Users"
                 ],
-                "summary": "Home",
+                "summary": "Login into user account",
+                "parameters": [
+                    {
+                        "description": "Login user",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.LoginRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Login successful",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.LoginResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -50,25 +69,25 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "Users"
                 ],
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Register new user",
+                        "description": "Register user",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.RegisterModel"
+                            "$ref": "#/definitions/models.RegisterInput"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Registration successful",
                         "schema": {
-                            "$ref": "#/definitions/models.RegisterResponse"
+                            "$ref": "#/definitions/utils.APIResponse"
                         }
                     }
                 }
@@ -76,31 +95,46 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.RegisterModel": {
+        "models.LoginRequest": {
             "type": "object",
             "required": [
-                "fullname",
                 "email",
-                "high_school",
-                "password",
-                "phone_number"
+                "password"
             ],
             "properties": {
-                "fullname": {
+                "email": {
                     "type": "string",
-                    "example": "John Doe"
+                    "example": "johndoe@example.com"
                 },
-                "diploma_grade": {
+                "password": {
                     "type": "string",
-                    "example": "A"
-                },
+                    "example": "supersecret"
+                }
+            }
+        },
+        "models.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "models.RegisterInput": {
+            "type": "object",
+            "properties": {
                 "diploma_year": {
                     "type": "integer",
                     "example": 2025
                 },
                 "email": {
                     "type": "string",
-                    "example": "john@example.com"
+                    "example": "john.doe@example.com"
+                },
+                "fullname": {
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "grade_level": {
                     "type": "integer",
@@ -112,36 +146,43 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
-                    "example": "supersecret"
+                    "example": "SuperSecret123"
                 },
                 "phone_number": {
                     "type": "string",
-                    "example": "+15555555555"
-                },
-                "role": {
-                    "type": "string",
-                    "example": "student"
+                    "example": "+855-17-345-6790"
                 }
             }
         },
-        "models.RegisterResponse": {
+        "utils.APIResponse": {
             "type": "object",
             "properties": {
-                "fullname": {
-                    "type": "string",
-                    "example": "John Doe"
+                "message": {
+                    "type": "string"
                 },
-                "created_at": {
-                    "type": "string",
-                    "example": "2025-09-04T15:30:00Z"
+                "status": {
+                    "type": "string"
                 },
-                "email": {
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "utils.Response": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
                     "type": "string",
-                    "example": "john@example.com"
+                    "example": "Login successful"
                 },
-                "updated_at": {
+                "status": {
                     "type": "string",
-                    "example": "2025-09-04T15:45:00Z"
+                    "example": "200"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         }

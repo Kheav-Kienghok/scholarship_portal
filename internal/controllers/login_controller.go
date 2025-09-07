@@ -22,8 +22,16 @@ func LoginControllerHandler(queries *db.Queries) *LoginController {
 	}
 }
 
+// Login godoc
+// @Summary Login into user account
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param body body models.LoginRequest true "Login user"
+// @Success 200 {object} utils.Response{data=models.LoginResponse} "Login successful"
+// @Router /login [post]
 func (ctrl *LoginController) Login(c *gin.Context) {
-	var input models.LoginInput
+	var input models.LoginRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -24,19 +25,29 @@ func RegisterControllerHandler(queries *db.Queries) *RegisterController {
 
 // Register godoc
 // @Summary Register a new user
-// @Tags Auth
+// @Tags Users
 // @Accept json
 // @Produce json
 // @Param body body models.RegisterInput true "Register user"
-// @Success 201 {object} db.User
-// @Failure 400 {object} utils.Response
-// @Failure 500 {object} utils.Response
+// @Success 201 {object} utils.APIResponse "Registration successful"
 // @Router /register [post]
 func (r *RegisterController) Register(c *gin.Context) {
 
 	var input models.RegisterInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+		return
+	}
+
+	// Check if user already exists
+	_, err := r.Queries.FindUserByEmail(c, input.Email)
+	if err != nil && err != sql.ErrNoRows {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	if err == nil {
+		utils.JSONIndent(c, http.StatusBadRequest, "User already exists", nil)
 		return
 	}
 
@@ -57,11 +68,12 @@ func (r *RegisterController) Register(c *gin.Context) {
 		PhoneNumber:  sql.NullString{String: input.PhoneNumber, Valid: input.PhoneNumber != ""},
 	}
 
-	user, err := r.Queries.CreateUser(c, params)
+	_, err = r.Queries.CreateUser(c, params)
 	if err != nil {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", err.Error())
+		logging.Error("DB: Failed to create user:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
-	utils.JSONIndent(c, http.StatusCreated, "Registration successful", user)
+	utils.JSONIndent(c, http.StatusCreated, "Registration successful", nil)
 }
