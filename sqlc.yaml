@@ -1,9 +1,12 @@
 version: "2"
 sql:
-  - engine: "postgresql"
-    queries: "internal/database/queries/"
-    schema: "migrations/"
+  - engine: "postgresql"                # PostgreSQL dialect
+    schema: "migrations/"               # Folder or file with schema
+    queries: "internal/database/queries"
     gen:
       go:
         package: "db"
         out: "internal/database/db"
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_interface: false

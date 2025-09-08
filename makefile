@@ -13,22 +13,22 @@ migrate-create:
 	goose -dir migrations create $$name sql
 
 
-# Build docker images
+# =========================
+# Docker Builds
+# =========================
 docker-debug:
-	docker build -t scholarship_portal:debug --target debug .
+	docker build --no-cache -t kienghok/scholarship_portal:debug --target debug .
 
 docker-prod:
-	docker build -t scholarship_portal:prod --target prod .
+	docker build --no-cache -t kienghok/scholarship_portal:prod --target prod .
 
-# Build and run in one command
+
+# =========================
+# Docker Compose Runs
+# =========================
+# Use profiles for running debug/prod services
 run-debug:
-	@if ! docker image inspect scholarship_portal:debug > /dev/null 2>&1; then \
-		$(MAKE) docker-debug; \
-	fi
-	docker-compose up debug
+	docker-compose --profile debug up -d --env-file ./.env
 
 run-prod:
-	@if ! docker image inspect scholarship_portal:prod > /dev/null 2>&1; then \
-		$(MAKE) docker-prod; \
-	fi
-	docker-compose up prod
+	docker-compose --profile prod up -d --env-file ./.env

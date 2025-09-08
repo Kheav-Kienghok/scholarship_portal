@@ -40,7 +40,9 @@ func (r *RegisterController) Register(c *gin.Context) {
 	}
 
 	// Check if user already exists
-	_, err := r.Queries.FindUserByEmail(c, input.Email)
+	_, err := r.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
+		Email: input.Email,
+	})
 	if err != nil && err != sql.ErrNoRows {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
@@ -59,7 +61,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	}
 
 	params := db.CreateUserParams{
-		Fullname:     input.Fullname,
+		Fullname:     sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
 		DiplomaYear:  sql.NullInt32{Int32: int32(input.DiplomaYear), Valid: input.DiplomaYear != 0},
 		Email:        input.Email,
 		GradeLevel:   sql.NullInt32{Int32: int32(input.GradeLevel), Valid: input.GradeLevel != 0},
@@ -68,9 +70,17 @@ func (r *RegisterController) Register(c *gin.Context) {
 		PhoneNumber:  sql.NullString{String: input.PhoneNumber, Valid: input.PhoneNumber != ""},
 	}
 
-	_, err = r.Queries.CreateUser(c, params)
+	user, err := r.Queries.CreateUser(c, params)
 	if err != nil {
 		logging.Error("DB: Failed to create user:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Create empty student profile for this user
+	err = r.Queries.CreateStudentProfile(c, user.ID)
+	if err != nil {
+		logging.Error("DB: Failed to create student profile:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}

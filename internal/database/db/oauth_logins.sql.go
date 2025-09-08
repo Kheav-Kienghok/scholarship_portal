@@ -23,15 +23,15 @@ RETURNING id, user_id, provider, provider_user_id, access_token, refresh_token, 
 `
 
 type UpsertOauthLoginParams struct {
-	UserID         sql.NullInt32
-	Provider       OauthProvider
-	ProviderUserID string
-	AccessToken    string
-	RefreshToken   sql.NullString
+	UserID         sql.NullInt32  `json:"user_id"`
+	Provider       OauthProvider  `json:"provider"`
+	ProviderUserID string         `json:"provider_user_id"`
+	AccessToken    string         `json:"access_token"`
+	RefreshToken   sql.NullString `json:"refresh_token"`
 }
 
 func (q *Queries) UpsertOauthLogin(ctx context.Context, arg UpsertOauthLoginParams) (OauthLogin, error) {
-	row := q.db.QueryRowContext(ctx, upsertOauthLogin,
+	row := q.queryRow(ctx, q.upsertOauthLoginStmt, upsertOauthLogin,
 		arg.UserID,
 		arg.Provider,
 		arg.ProviderUserID,

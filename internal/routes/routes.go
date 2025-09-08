@@ -38,7 +38,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	homeController := controllers.NewHomeController()
 	loginController := controllers.LoginControllerHandler(queries)
 	registerController := controllers.RegisterControllerHandler(queries)
-	userController := controllers.UserControllerHandler(queries)
+	userController := controllers.UserControllerHandler(dbConn, queries)
 
 	auth := auth.NewGoogleAuthHandler(queries)
 
@@ -63,7 +63,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		protected := api.Group("")
 		protected.Use(middlewares.JWTAuthMultiple("student", "admin"))
 		{
-			protected.POST("/update-profile", userController.UpdateProfile)
+			protected.POST("/update-profile", userController.UpdateUserAndProfile)
 		}
 	}
 

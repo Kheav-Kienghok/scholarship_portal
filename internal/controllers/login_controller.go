@@ -37,7 +37,9 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := ctrl.Queries.FindUserByEmail(c, input.Email)
+	user, err := ctrl.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
+		Email: input.Email,
+	})
 	if err != nil {
 		utils.JSONIndent(c, http.StatusUnauthorized, "User not found", nil)
 		return
@@ -51,7 +53,7 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 
 	roleStr, _ := user.Role.(string)
 
-	token, err := tokens.GenerateToken(user.ID, user.Fullname, user.Email, roleStr)
+	token, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, roleStr)
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not generate token", nil)
 		return

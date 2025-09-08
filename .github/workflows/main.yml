@@ -14,10 +14,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Install make
-      run: sudo apt-get update && sudo apt-get install -y make
+      uses: actions/checkout@v4
 
     - name: Login to Docker Hub
       uses: docker/login-action@v2
@@ -36,6 +33,9 @@ jobs:
     runs-on: self-hosted
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Pull Docker image
       run: docker pull kienghok/scholarship_portals:debug
 
@@ -44,12 +44,13 @@ jobs:
 
     - name: Run Docker container
       run: |
-        docker run -d \
+        docker run --rm -d \
           --name scholarship_portal \
           -p 8080:8080 \
           -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
           -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
           -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+          -e GOOGLE_REDIRECT_URL="${{ secrets.GOOGLE_REDIRECT_URL }}" \
           -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
           -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
           kienghok/scholarship_portals:debug

@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type DBTX interface {
@@ -20,12 +21,128 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+	q := Queries{db: db}
+	var err error
+	if q.createStudentProfileStmt, err = db.PrepareContext(ctx, createStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateStudentProfile: %w", err)
+	}
+	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.getUserByIDOrEmailStmt, err = db.PrepareContext(ctx, getUserByIDOrEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByIDOrEmail: %w", err)
+	}
+	if q.getUserWithProfileStmt, err = db.PrepareContext(ctx, getUserWithProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserWithProfile: %w", err)
+	}
+	if q.updateStudentProfileStmt, err = db.PrepareContext(ctx, updateStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateStudentProfile: %w", err)
+	}
+	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
+	}
+	if q.upsertOauthLoginStmt, err = db.PrepareContext(ctx, upsertOauthLogin); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertOauthLogin: %w", err)
+	}
+	return &q, nil
+}
+
+func (q *Queries) Close() error {
+	var err error
+	if q.createStudentProfileStmt != nil {
+		if cerr := q.createStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createStudentProfileStmt: %w", cerr)
+		}
+	}
+	if q.createUserStmt != nil {
+		if cerr := q.createUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.getUserByIDOrEmailStmt != nil {
+		if cerr := q.getUserByIDOrEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByIDOrEmailStmt: %w", cerr)
+		}
+	}
+	if q.getUserWithProfileStmt != nil {
+		if cerr := q.getUserWithProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserWithProfileStmt: %w", cerr)
+		}
+	}
+	if q.updateStudentProfileStmt != nil {
+		if cerr := q.updateStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateStudentProfileStmt: %w", cerr)
+		}
+	}
+	if q.updateUserProfileStmt != nil {
+		if cerr := q.updateUserProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserProfileStmt: %w", cerr)
+		}
+	}
+	if q.upsertOauthLoginStmt != nil {
+		if cerr := q.upsertOauthLoginStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertOauthLoginStmt: %w", cerr)
+		}
+	}
+	return err
+}
+
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
+	case stmt != nil:
+		return stmt.ExecContext(ctx, args...)
+	default:
+		return q.db.ExecContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryContext(ctx, args...)
+	default:
+		return q.db.QueryContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryRowContext(ctx, args...)
+	default:
+		return q.db.QueryRowContext(ctx, query, args...)
+	}
+}
+
 type Queries struct {
-	db DBTX
+	db                       DBTX
+	tx                       *sql.Tx
+	createStudentProfileStmt *sql.Stmt
+	createUserStmt           *sql.Stmt
+	getUserByIDOrEmailStmt   *sql.Stmt
+	getUserWithProfileStmt   *sql.Stmt
+	updateStudentProfileStmt *sql.Stmt
+	updateUserProfileStmt    *sql.Stmt
+	upsertOauthLoginStmt     *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db: tx,
+		db:                       tx,
+		tx:                       tx,
+		createStudentProfileStmt: q.createStudentProfileStmt,
+		createUserStmt:           q.createUserStmt,
+		getUserByIDOrEmailStmt:   q.getUserByIDOrEmailStmt,
+		getUserWithProfileStmt:   q.getUserWithProfileStmt,
+		updateStudentProfileStmt: q.updateStudentProfileStmt,
+		updateUserProfileStmt:    q.updateUserProfileStmt,
+		upsertOauthLoginStmt:     q.upsertOauthLoginStmt,
 	}
 }

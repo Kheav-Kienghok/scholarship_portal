@@ -8,7 +8,54 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+
+	"github.com/sqlc-dev/pqtype"
 )
+
+type DiplomaGrade string
+
+const (
+	DiplomaGradeA DiplomaGrade = "A"
+	DiplomaGradeB DiplomaGrade = "B"
+	DiplomaGradeC DiplomaGrade = "C"
+	DiplomaGradeD DiplomaGrade = "D"
+	DiplomaGradeF DiplomaGrade = "F"
+)
+
+func (e *DiplomaGrade) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DiplomaGrade(s)
+	case string:
+		*e = DiplomaGrade(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DiplomaGrade: %T", src)
+	}
+	return nil
+}
+
+type NullDiplomaGrade struct {
+	DiplomaGrade DiplomaGrade `json:"diploma_grade"`
+	Valid        bool         `json:"valid"` // Valid is true if DiplomaGrade is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDiplomaGrade) Scan(value interface{}) error {
+	if value == nil {
+		ns.DiplomaGrade, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DiplomaGrade.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDiplomaGrade) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DiplomaGrade), nil
+}
 
 type OauthProvider string
 
@@ -30,8 +77,8 @@ func (e *OauthProvider) Scan(src interface{}) error {
 }
 
 type NullOauthProvider struct {
-	OauthProvider OauthProvider
-	Valid         bool // Valid is true if OauthProvider is not NULL
+	OauthProvider OauthProvider `json:"oauth_provider"`
+	Valid         bool          `json:"valid"` // Valid is true if OauthProvider is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -53,26 +100,34 @@ func (ns NullOauthProvider) Value() (driver.Value, error) {
 }
 
 type OauthLogin struct {
-	ID             int32
-	UserID         sql.NullInt32
-	Provider       OauthProvider
-	ProviderUserID string
-	AccessToken    string
-	RefreshToken   sql.NullString
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
+	ID             int32          `json:"id"`
+	UserID         sql.NullInt32  `json:"user_id"`
+	Provider       OauthProvider  `json:"provider"`
+	ProviderUserID string         `json:"provider_user_id"`
+	AccessToken    string         `json:"access_token"`
+	RefreshToken   sql.NullString `json:"refresh_token"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+}
+
+type StudentProfile struct {
+	StudentID    int32                 `json:"student_id"`
+	DiplomaGrade NullDiplomaGrade      `json:"diploma_grade"`
+	SelectMajors pqtype.NullRawMessage `json:"select_majors"`
+	CreatedAt    sql.NullTime          `json:"created_at"`
+	UpdatedAt    sql.NullTime          `json:"updated_at"`
 }
 
 type User struct {
-	ID           int32
-	Fullname     string
-	Email        string
-	PasswordHash sql.NullString
-	Role         interface{}
-	PhoneNumber  sql.NullString
-	HighSchool   sql.NullString
-	GradeLevel   sql.NullInt32
-	DiplomaYear  sql.NullInt32
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
+	ID           int32          `json:"id"`
+	Fullname     sql.NullString `json:"fullname"`
+	Email        string         `json:"email"`
+	PasswordHash sql.NullString `json:"password_hash"`
+	Role         interface{}    `json:"role"`
+	PhoneNumber  sql.NullString `json:"phone_number"`
+	HighSchool   sql.NullString `json:"high_school"`
+	GradeLevel   sql.NullInt32  `json:"grade_level"`
+	DiplomaYear  sql.NullInt32  `json:"diploma_year"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	UpdatedAt    sql.NullTime   `json:"updated_at"`
 }

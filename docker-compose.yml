@@ -1,26 +1,44 @@
 services:
-  debug:
-    image: scholarship_portal:debug
+  app:
     build:
       context: .
-      target: debug
-    env_file:
-      - .env
-    ports:
-      - "8080:8080"
-    tty: true
-    stdin_open: true
-
-  prod:
-    image: scholarship_portal:prod
-    build:
-      context: .
+      dockerfile: Dockerfile
       target: prod
     env_file:
-      - .env
+      - ./.env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GIN_MODE=${GIN_MODE}
     volumes:
       - ./logs:/app/logs
     ports:
       - "8080:8080"
+    tty: false
+    stdin_open: false
+    profiles: ["prod"]
+
+  app-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: debug
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GIN_MODE=${GIN_MODE}
+    ports:
+      - "8081:8080"  # Different host port to avoid conflict
     tty: true
     stdin_open: true
+    volumes:
+      - .:/app  # Live code updates for debugging
+    profiles: ["debug"]

@@ -41,7 +41,7 @@ func getGoogleOAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  "http://localhost:8080/api/v1/auth/google/callback",
+		RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
@@ -103,7 +103,9 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	// Check if user exists
-	user, err := h.Queries.FindUserByEmail(c, userInfo.Email)
+	user, err := h.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
+		Email: userInfo.Email,
+	})
 	if err != nil && err != sql.ErrNoRows {
 		logging.Error("DB: Failed to find user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
@@ -113,8 +115,8 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	if err == sql.ErrNoRows {
 		// Create user if not exists
 		_, err = h.Queries.CreateUser(c, db.CreateUserParams{
-			Fullname:     userInfo.Name,
 			Email:        userInfo.Email,
+			Fullname:     sql.NullString{Valid: false},
 			PasswordHash: sql.NullString{Valid: false},
 			PhoneNumber:  sql.NullString{Valid: false},
 			HighSchool:   sql.NullString{Valid: false},
@@ -128,7 +130,9 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 		}
 
 		// Fetch the user again to get the correct ID
-		user, err = h.Queries.FindUserByEmail(c, userInfo.Email)
+		user, err = h.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
+			Email: userInfo.Email,
+		})
 		if err != nil {
 			logging.Error("DB: Failed to fetch user after creation:", err)
 			utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
@@ -151,7 +155,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	tokenString, err := tokens.GenerateToken(user.ID, user.Fullname, user.Email, user.Role.(string))
+	tokenString, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, user.Role.(string))
 	if err != nil {
 		logging.Error("JWT: Failed to generate token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
