@@ -23,11 +23,19 @@ func init() {
 	}
 }
 
-// @title EduVision for Scholarship Portal API
+// @title EduVision Scholarship Portal API
 // @version 1.0
-// @description API documentation for EduVision Scholarship Portal
+// @description This API allows managing student profiles, authentication, and scholarship applications for the EduVision portal.
+// @termsOfService https://eduvsion.example.com/terms
+// @contact.name EduVision Support
+// @contact.url https://eduvsion.example.com/support
+// @contact.email support@eduvsion.example.com
 // @host localhost:8080
 // @BasePath /api/v1
+// @schemes http https
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Initialize logger
 	if err := logging.InitLogger(); err != nil {

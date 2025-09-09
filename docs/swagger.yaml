@@ -42,6 +42,73 @@ definitions:
         example: +855-17-345-6790
         type: string
     type: object
+  models.StudentProfile:
+    properties:
+      diploma_grade:
+        example: A+
+        type: string
+      select_majors:
+        example:
+        - '["Computer Science"'
+        - ' "Law"]'
+        items:
+          type: string
+        type: array
+    type: object
+  models.UpdateUserRequest:
+    properties:
+      diploma_grade:
+        type: string
+      diploma_year:
+        type: integer
+      fullname:
+        type: string
+      grade_level:
+        type: integer
+      high_school:
+        type: string
+      phone_number:
+        type: string
+      select_majors:
+        items:
+          type: string
+        type: array
+    type: object
+  models.UserProfileResponse:
+    properties:
+      diploma_year:
+        example: 2023
+        type: integer
+      email:
+        example: john.doe@example.com
+        type: string
+      fullname:
+        example: John Doe
+        type: string
+      grade_level:
+        example: 12
+        type: integer
+      high_school:
+        example: ABC High School
+        type: string
+      id:
+        example: 1
+        type: integer
+      phone_number:
+        example: 123-456-7890
+        type: string
+      profile_created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      profile_updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      role:
+        example: student
+        type: string
+      student_profile:
+        $ref: '#/definitions/models.StudentProfile'
+    type: object
   utils.APIResponse:
     properties:
       message:
@@ -49,6 +116,19 @@ definitions:
       status:
         type: string
       success:
+        type: boolean
+    type: object
+  utils.APIUpdateResponse:
+    properties:
+      data: {}
+      message:
+        example: User profile updated successfully
+        type: string
+      status:
+        example: "200"
+        type: string
+      success:
+        example: true
         type: boolean
     type: object
   utils.Response:
@@ -66,9 +146,14 @@ definitions:
     type: object
 host: localhost:8080
 info:
-  contact: {}
-  description: API documentation for EduVision Scholarship Portal
-  title: EduVision for Scholarship Portal API
+  contact:
+    email: support@eduvsion.example.com
+    name: EduVision Support
+    url: https://eduvsion.example.com/support
+  description: This API allows managing student profiles, authentication, and scholarship
+    applications for the EduVision portal.
+  termsOfService: https://eduvsion.example.com/terms
+  title: EduVision Scholarship Portal API
   version: "1.0"
 paths:
   /login:
@@ -96,13 +181,29 @@ paths:
               type: object
       summary: Login into user account
       tags:
+      - Authentication
+  /profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Fetch User successfully
+          schema:
+            $ref: '#/definitions/models.UserProfileResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile information
+      tags:
       - Users
   /register:
     post:
       consumes:
       - application/json
+      description: Create a new student account with email, password, and profile
+        info
       parameters:
-      - description: Register user
+      - description: User registration payload
         in: body
         name: body
         required: true
@@ -117,5 +218,36 @@ paths:
             $ref: '#/definitions/utils.APIResponse'
       summary: Register a new user
       tags:
+      - Authentication
+  /update-profile:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update user profile
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Update User Profile successfully
+          schema:
+            $ref: '#/definitions/utils.APIUpdateResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user and profile information
+      tags:
       - Users
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

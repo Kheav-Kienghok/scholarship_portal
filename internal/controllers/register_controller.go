@@ -25,10 +25,11 @@ func RegisterControllerHandler(queries *db.Queries) *RegisterController {
 
 // Register godoc
 // @Summary Register a new user
-// @Tags Users
+// @Description Create a new student account with email, password, and profile info
+// @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param body body models.RegisterInput true "Register user"
+// @Param body body models.RegisterInput true "User registration payload"
 // @Success 201 {object} utils.APIResponse "Registration successful"
 // @Router /register [post]
 func (r *RegisterController) Register(c *gin.Context) {

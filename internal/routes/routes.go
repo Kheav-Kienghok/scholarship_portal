@@ -61,9 +61,11 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 
 		// Protected endpoints (example: everything below requires auth)
 		protected := api.Group("")
-		protected.Use(middlewares.JWTAuthMultiple("student", "admin"))
+		protected.Use(middlewares.JWTAuthSingle("student"))
 		{
-			protected.POST("/update-profile", userController.UpdateUserAndProfile)
+			protected.GET("/profile", userController.GetUserProfile)
+
+			protected.PATCH("/update-profile", userController.UpdateUserAndProfile)
 		}
 	}
 

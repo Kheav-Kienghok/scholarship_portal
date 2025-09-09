@@ -24,7 +24,7 @@ func LoginControllerHandler(queries *db.Queries) *LoginController {
 
 // Login godoc
 // @Summary Login into user account
-// @Tags Users
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param body body models.LoginRequest true "Login user"

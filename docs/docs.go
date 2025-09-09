@@ -9,7 +9,12 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "https://eduvsion.example.com/terms",
+        "contact": {
+            "name": "EduVision Support",
+            "url": "https://eduvsion.example.com/support",
+            "email": "support@eduvsion.example.com"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -24,7 +29,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Authentication"
                 ],
                 "summary": "Login into user account",
                 "parameters": [
@@ -60,10 +65,12 @@ const docTemplate = `{
                 }
             }
         },
-        "/register": {
-            "post": {
-                "consumes": [
-                    "application/json"
+        "/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "produces": [
                     "application/json"
@@ -71,10 +78,33 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
+                "summary": "Get user profile information",
+                "responses": {
+                    "200": {
+                        "description": "Fetch User successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserProfileResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Create a new student account with email, password, and profile info",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Register user",
+                        "description": "User registration payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -88,6 +118,44 @@ const docTemplate = `{
                         "description": "Registration successful",
                         "schema": {
                             "$ref": "#/definitions/utils.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/update-profile": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user and profile information",
+                "parameters": [
+                    {
+                        "description": "Update user profile",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Update User Profile successfully",
+                        "schema": {
+                            "$ref": "#/definitions/utils.APIUpdateResponse"
                         }
                     }
                 }
@@ -154,6 +222,102 @@ const docTemplate = `{
                 }
             }
         },
+        "models.StudentProfile": {
+            "type": "object",
+            "properties": {
+                "diploma_grade": {
+                    "type": "string",
+                    "example": "A+"
+                },
+                "select_majors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"Computer Science\"",
+                        " \"Law\"]"
+                    ]
+                }
+            }
+        },
+        "models.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "diploma_grade": {
+                    "type": "string"
+                },
+                "diploma_year": {
+                    "type": "integer"
+                },
+                "fullname": {
+                    "type": "string"
+                },
+                "grade_level": {
+                    "type": "integer"
+                },
+                "high_school": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "select_majors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.UserProfileResponse": {
+            "type": "object",
+            "properties": {
+                "diploma_year": {
+                    "type": "integer",
+                    "example": 2023
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "fullname": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "grade_level": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "high_school": {
+                    "type": "string",
+                    "example": "ABC High School"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "phone_number": {
+                    "type": "string",
+                    "example": "123-456-7890"
+                },
+                "profile_created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "profile_updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "student"
+                },
+                "student_profile": {
+                    "$ref": "#/definitions/models.StudentProfile"
+                }
+            }
+        },
         "utils.APIResponse": {
             "type": "object",
             "properties": {
@@ -165,6 +329,24 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "utils.APIUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "User profile updated successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "200"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -186,6 +368,13 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
@@ -194,9 +383,9 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
-	Title:            "EduVision for Scholarship Portal API",
-	Description:      "API documentation for EduVision Scholarship Portal",
+	Schemes:          []string{"http", "https"},
+	Title:            "EduVision Scholarship Portal API",
+	Description:      "This API allows managing student profiles, authentication, and scholarship applications for the EduVision portal.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
