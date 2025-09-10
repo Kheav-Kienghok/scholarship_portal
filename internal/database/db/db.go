@@ -24,11 +24,20 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.createScholarshipStmt, err = db.PrepareContext(ctx, createScholarship); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateScholarship: %w", err)
+	}
+	if q.createScholarshipWithDetailsStmt, err = db.PrepareContext(ctx, createScholarshipWithDetails); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateScholarshipWithDetails: %w", err)
+	}
 	if q.createStudentProfileStmt, err = db.PrepareContext(ctx, createStudentProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateStudentProfile: %w", err)
 	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.getAllScholarshipsStmt, err = db.PrepareContext(ctx, getAllScholarships); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllScholarships: %w", err)
 	}
 	if q.getUserByIDOrEmailStmt, err = db.PrepareContext(ctx, getUserByIDOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByIDOrEmail: %w", err)
@@ -50,6 +59,16 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.createScholarshipStmt != nil {
+		if cerr := q.createScholarshipStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createScholarshipStmt: %w", cerr)
+		}
+	}
+	if q.createScholarshipWithDetailsStmt != nil {
+		if cerr := q.createScholarshipWithDetailsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createScholarshipWithDetailsStmt: %w", cerr)
+		}
+	}
 	if q.createStudentProfileStmt != nil {
 		if cerr := q.createStudentProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createStudentProfileStmt: %w", cerr)
@@ -58,6 +77,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.getAllScholarshipsStmt != nil {
+		if cerr := q.getAllScholarshipsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllScholarshipsStmt: %w", cerr)
 		}
 	}
 	if q.getUserByIDOrEmailStmt != nil {
@@ -122,27 +146,33 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                       DBTX
-	tx                       *sql.Tx
-	createStudentProfileStmt *sql.Stmt
-	createUserStmt           *sql.Stmt
-	getUserByIDOrEmailStmt   *sql.Stmt
-	getUserWithProfileStmt   *sql.Stmt
-	updateStudentProfileStmt *sql.Stmt
-	updateUserProfileStmt    *sql.Stmt
-	upsertOauthLoginStmt     *sql.Stmt
+	db                               DBTX
+	tx                               *sql.Tx
+	createScholarshipStmt            *sql.Stmt
+	createScholarshipWithDetailsStmt *sql.Stmt
+	createStudentProfileStmt         *sql.Stmt
+	createUserStmt                   *sql.Stmt
+	getAllScholarshipsStmt           *sql.Stmt
+	getUserByIDOrEmailStmt           *sql.Stmt
+	getUserWithProfileStmt           *sql.Stmt
+	updateStudentProfileStmt         *sql.Stmt
+	updateUserProfileStmt            *sql.Stmt
+	upsertOauthLoginStmt             *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                       tx,
-		tx:                       tx,
-		createStudentProfileStmt: q.createStudentProfileStmt,
-		createUserStmt:           q.createUserStmt,
-		getUserByIDOrEmailStmt:   q.getUserByIDOrEmailStmt,
-		getUserWithProfileStmt:   q.getUserWithProfileStmt,
-		updateStudentProfileStmt: q.updateStudentProfileStmt,
-		updateUserProfileStmt:    q.updateUserProfileStmt,
-		upsertOauthLoginStmt:     q.upsertOauthLoginStmt,
+		db:                               tx,
+		tx:                               tx,
+		createScholarshipStmt:            q.createScholarshipStmt,
+		createScholarshipWithDetailsStmt: q.createScholarshipWithDetailsStmt,
+		createStudentProfileStmt:         q.createStudentProfileStmt,
+		createUserStmt:                   q.createUserStmt,
+		getAllScholarshipsStmt:           q.getAllScholarshipsStmt,
+		getUserByIDOrEmailStmt:           q.getUserByIDOrEmailStmt,
+		getUserWithProfileStmt:           q.getUserWithProfileStmt,
+		updateStudentProfileStmt:         q.updateStudentProfileStmt,
+		updateUserProfileStmt:            q.updateUserProfileStmt,
+		upsertOauthLoginStmt:             q.upsertOauthLoginStmt,
 	}
 }

@@ -110,6 +110,20 @@ type OauthLogin struct {
 	UpdatedAt      sql.NullTime   `json:"updated_at"`
 }
 
+type Scholarship struct {
+	ID              int32                 `json:"id"`
+	Title           string                `json:"title"`
+	Provider        string                `json:"provider"`
+	Description     sql.NullString        `json:"description"`
+	InstitutionInfo pqtype.NullRawMessage `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+	ExtraNotes      sql.NullString        `json:"extra_notes"`
+	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
+	OfficialLink    sql.NullString        `json:"official_link"`
+	CreatedAt       sql.NullTime          `json:"created_at"`
+	UpdatedAt       sql.NullTime          `json:"updated_at"`
+}
+
 type StudentProfile struct {
 	StudentID    int32                 `json:"student_id"`
 	DiplomaGrade NullDiplomaGrade      `json:"diploma_grade"`
