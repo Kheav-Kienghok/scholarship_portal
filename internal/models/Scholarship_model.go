@@ -6,14 +6,15 @@ import (
 )
 
 type CreateScholarshipRequest struct {
-	Title           string          `json:"title" binding:"required"`
-	Provider        string          `json:"provider" binding:"required"`
-	Description     *string         `json:"description"`
-	InstitutionInfo json.RawMessage `json:"institution_info"`
-	Requirements    json.RawMessage `json:"requirements"`
-	ExtraNotes      *string         `json:"extra_notes"`
-	DeadlineEnd     *string         `json:"deadline_end" binding:"required"`
-	OfficialLink    *string         `json:"official_link"`
+	Title           string          `form:"title" json:"title"`
+	Provider        string          `form:"provider" json:"provider"`
+	Description     *string         `form:"description" json:"description"`
+	InstitutionInfo json.RawMessage `form:"institution_info" json:"institution_info"`
+	Requirements    json.RawMessage `form:"requirements" json:"requirements"`
+	ExtraNotes      *string         `form:"extra_notes" json:"extra_notes"`
+	DeadlineEnd     *string         `form:"deadline_end" json:"deadline_end"`
+	OfficialLink    *string         `form:"official_link" json:"official_link"`
+	PhotoURL        *string         `form:"photo_url" json:"photo_url"` // new field
 }
 
 type ScholarshipResponse struct {
@@ -26,17 +27,6 @@ type ScholarshipResponse struct {
 	ExtraNotes      string          `json:"extra_notes,omitempty"`
 	DeadlineEnd     *time.Time      `json:"deadline_end,omitempty"`
 	OfficialLink    string          `json:"official_link,omitempty"`
+	PhotoURL        string          `json:"photo_url,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
 }
-
-// type Scholarship struct {
-// 	ID              int64  `json:"id"`
-// 	Title           string `json:"title"`
-// 	Provider        string `json:"provider"`
-// 	Description     string `json:"description"`
-// 	InstitutionInfo string `json:"institution_info"`
-// 	Requirements    string `json:"requirements"`
-// 	ExtraNotes      string `json:"extra_notes"`
-// 	DeadlineEnd     string `json:"deadline_end"`
-// 	OfficialLink    string `json:"official_link"`
-// }

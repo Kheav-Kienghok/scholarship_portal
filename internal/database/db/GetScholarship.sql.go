@@ -23,6 +23,7 @@ SELECT
     extra_notes,
     deadline_end,
     official_link,
+    photo_url,
     created_at
 FROM scholarships
 ORDER BY created_at DESC
@@ -38,6 +39,7 @@ type GetAllScholarshipsRow struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 }
 
@@ -60,6 +62,7 @@ func (q *Queries) GetAllScholarships(ctx context.Context) ([]GetAllScholarshipsR
 			&i.ExtraNotes,
 			&i.DeadlineEnd,
 			&i.OfficialLink,
+			&i.PhotoUrl,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

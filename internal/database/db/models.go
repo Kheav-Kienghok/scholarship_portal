@@ -120,6 +120,7 @@ type Scholarship struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 	UpdatedAt       sql.NullTime          `json:"updated_at"`
 }

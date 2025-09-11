@@ -10,6 +10,7 @@ CREATE TABLE scholarships (
     extra_notes TEXT,
     deadline_end DATE,
     official_link VARCHAR(255),
+    photo_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );  

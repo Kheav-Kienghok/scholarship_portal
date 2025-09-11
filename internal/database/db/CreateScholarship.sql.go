@@ -21,8 +21,9 @@ INSERT INTO scholarships (
     requirements,
     extra_notes,
     deadline_end,
-    official_link
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    official_link,
+    photo_url
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, title, provider
 `
 
@@ -35,6 +36,7 @@ type CreateScholarshipParams struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
 }
 
 type CreateScholarshipRow struct {
@@ -53,6 +55,7 @@ func (q *Queries) CreateScholarship(ctx context.Context, arg CreateScholarshipPa
 		arg.ExtraNotes,
 		arg.DeadlineEnd,
 		arg.OfficialLink,
+		arg.PhotoUrl,
 	)
 	var i CreateScholarshipRow
 	err := row.Scan(&i.ID, &i.Title, &i.Provider)
@@ -70,7 +73,7 @@ INSERT INTO scholarships (
     deadline_end,
     official_link
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, created_at, updated_at
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at
 `
 
 type CreateScholarshipWithDetailsParams struct {
@@ -106,6 +109,7 @@ func (q *Queries) CreateScholarshipWithDetails(ctx context.Context, arg CreateSc
 		&i.ExtraNotes,
 		&i.DeadlineEnd,
 		&i.OfficialLink,
+		&i.PhotoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

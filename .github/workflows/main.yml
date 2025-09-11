@@ -42,15 +42,18 @@ jobs:
     - name: Delete Old Container
       run: docker rm -f scholarship_portal || true
 
-    - name: Run Docker container
+    - name: Run Docker Compose in CI
       run: |
-        docker run --rm -d \
-          --name scholarship_portal \
-          -p 8080:8080 \
-          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-          -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
-          -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-          -e GOOGLE_REDIRECT_URL="${{ secrets.GOOGLE_REDIRECT_URL }}" \
-          -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-          -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-          kienghok/scholarship_portals:debug
+        docker-compose -f docker-compose.ci.yml up -d
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        GOOGLE_REDIRECT_URL: ${{ secrets.GOOGLE_REDIRECT_URL }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+        GIN_MODE: debug

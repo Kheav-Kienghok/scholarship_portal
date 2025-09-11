@@ -7,8 +7,9 @@ INSERT INTO scholarships (
     requirements,
     extra_notes,
     deadline_end,
-    official_link
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    official_link,
+    photo_url
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, title, provider;
 
 -- name: CreateScholarshipWithDetails :one

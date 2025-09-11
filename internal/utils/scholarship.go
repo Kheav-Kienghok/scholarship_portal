@@ -87,7 +87,8 @@ func MapScholarship(row db.GetAllScholarshipsRow) models.ScholarshipResponse {
 		ExtraNotes:      extraNotes,
 		DeadlineEnd:     deadline,
 		OfficialLink:    officialLink,
-		CreatedAt:       func() time.Time {
+		PhotoURL:        row.PhotoUrl.String,
+		CreatedAt: func() time.Time {
 			if createdAt != nil {
 				return *createdAt
 			}

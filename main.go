@@ -8,6 +8,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/server"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -63,6 +64,8 @@ func main() {
 			log.Fatal("Failed to run migrations:", err)
 		}
 	}
+
+	storage.InitS3()
 
 	// Get server port from .env or default to 8080
 	port := os.Getenv("PORT")

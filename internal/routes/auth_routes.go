@@ -1,15 +1,15 @@
 package routes
 
 import (
+	"database/sql"
+
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/auth"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
-	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterAuthRoutes(api *gin.RouterGroup, db *database.Database) {
-	queries := importDB.New(db.DB)
+func RegisterAuthRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries) {
 
 	loginController := controllers.LoginControllerHandler(queries)
 	registerController := controllers.RegisterControllerHandler(queries)
