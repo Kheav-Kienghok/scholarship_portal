@@ -17,7 +17,6 @@ SELECT
     u.id,
     u.fullname,
     u.email,
-    u.role,
     u.phone_number,
     u.high_school,
     u.grade_level,
@@ -40,7 +39,6 @@ type GetUserWithProfileRow struct {
 	ID               int32                 `json:"id"`
 	Fullname         sql.NullString        `json:"fullname"`
 	Email            string                `json:"email"`
-	Role             interface{}           `json:"role"`
 	PhoneNumber      sql.NullString        `json:"phone_number"`
 	HighSchool       sql.NullString        `json:"high_school"`
 	GradeLevel       sql.NullInt32         `json:"grade_level"`
@@ -58,7 +56,6 @@ func (q *Queries) GetUserWithProfile(ctx context.Context, arg GetUserWithProfile
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
-		&i.Role,
 		&i.PhoneNumber,
 		&i.HighSchool,
 		&i.GradeLevel,

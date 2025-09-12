@@ -194,7 +194,6 @@ func (u *UserController) GetUserProfile(c *gin.Context) {
 		ID:          userWithProfile.ID,
 		Fullname:    userWithProfile.Fullname.String,
 		Email:       userWithProfile.Email,
-		Role:        userWithProfile.Role.(string),
 		PhoneNumber: userWithProfile.PhoneNumber.String,
 		HighSchool:  userWithProfile.HighSchool.String,
 		GradeLevel:  int(userWithProfile.GradeLevel.Int32),

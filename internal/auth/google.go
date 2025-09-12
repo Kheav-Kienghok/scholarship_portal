@@ -155,7 +155,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	tokenString, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, user.Role.(string))
+	tokenString, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, "student")
 	if err != nil {
 		logging.Error("JWT: Failed to generate token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)

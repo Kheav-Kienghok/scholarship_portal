@@ -3,7 +3,6 @@ SELECT
     u.id,
     u.fullname,
     u.email,
-    u.role,
     u.phone_number,
     u.high_school,
     u.grade_level,

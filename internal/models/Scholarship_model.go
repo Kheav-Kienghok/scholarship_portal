@@ -26,7 +26,7 @@ type ScholarshipResponse struct {
 	Requirements    json.RawMessage `json:"requirements,omitempty"`
 	ExtraNotes      string          `json:"extra_notes,omitempty"`
 	DeadlineEnd     *time.Time      `json:"deadline_end,omitempty"`
-	OfficialLink    string          `json:"official_link,omitempty"`
-	PhotoURL        string          `json:"photo_url,omitempty"`
+	OfficialLink    *string         `json:"official_link,omitempty"`
+	PhotoURL        *string         `json:"photo_url,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
 }

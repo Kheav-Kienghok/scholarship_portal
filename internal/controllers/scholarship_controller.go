@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"path/filepath"
+	"strings"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
@@ -39,7 +40,7 @@ func ScholarshipControllerHandler(queries *db.Queries) *ScholarshipController {
 func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 
 	// Get JSON string from form field
-	jsonStr := c.PostForm("json")
+	jsonStr := c.PostForm("data")
 	if jsonStr == "" {
 		utils.JSONIndent(c, http.StatusBadRequest, "Missing JSON payload", nil)
 		return
@@ -51,19 +52,33 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		return
 	}
 
-	// Parse JSON string into struct
-	// var input models.CreateScholarshipRequest
-	// if err := c.ShouldBindJSON(&input); err != nil {
-	// 	utils.JSONIndent(c, http.StatusBadRequest, "Missing parameter", err.Error())
-	// 	return
-	// }
+	title_name := utils.SanitizeString(input.Title)
+	if title_name == "" {
+		utils.JSONIndent(c, http.StatusBadRequest, "Title cannot be empty or whitespace", nil)
+		return
+	}
 
-	// Handle file upload (optional)
+	// replace spaces with underscores and optionally lowercase
+	title_name = strings.ReplaceAll(title_name, " ", "_")
+	title_name = strings.ToLower(title_name)
+
+	// Handle file upload
 	file, handler, err := c.Request.FormFile("photo")
-	if err == nil { // photo provided
+	if err == nil {
 		defer file.Close()
 
-		key := fmt.Sprintf("scholarships/%d-%s", time.Now().UnixNano(), handler.Filename)
+		// Extract the extension (e.g. ".png", ".jpg")
+		ext := filepath.Ext(handler.Filename)
+
+		// validate extension to avoid weird uploads
+		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true}
+		if ext != "" && !allowed[ext] {
+			utils.JSONIndent(c, http.StatusBadRequest, "Unsupported file type", nil)
+			return
+		}
+
+		// Create a unique key for the file in S3
+		key := fmt.Sprintf("scholarship_logo/%s%s", title_name, ext)
 
 		_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 			Bucket: &storage.BucketName,
@@ -75,8 +90,8 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 			return
 		}
 
-		url := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", storage.BucketName, key)
-		input.PhotoURL = &url
+		// Store only the key in the database
+		input.PhotoURL = &key
 	}
 
 	scholarship, err := ctrl.Queries.CreateScholarship(c, db.CreateScholarshipParams{
@@ -114,27 +129,41 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 
 	var response []models.ScholarshipResponse
 	for _, s := range scholarships {
-		response = append(response, utils.MapScholarship(s))
+		sr := utils.MapScholarship(s)
+
+		// Generate presigned URL if PhotoUrl is present
+		if s.PhotoUrl.Valid && s.PhotoUrl.String != "" {
+			url, err := utils.GeneratePresignedURL(storage.BucketName, s.PhotoUrl.String, storage.S3Client)
+			if err != nil {
+				logging.Error("Failed to generate presigned URL for scholarship ", s.ID, ": ", err)
+				sr.PhotoURL = nil // or keep original key
+			} else {
+				sr.PhotoURL = &url
+			}
+		}
+
+		response = append(response, sr)
 	}
 
 	utils.JSONIndent(c, http.StatusOK, "List of scholarships", response)
 }
 
-// // GetScholarshipByID godoc
-// // @Summary Get a scholarship by ID
+// // // GetScholarshipBySchoolName godoc
+// // @Summary Get a scholarship by school name
 // // @Tags Scholarships
 // // @Produce json
-// // @Param id path int true "Scholarship ID"
+// // @Param school_name path string true "School Name"
 // // @Success 200 {object} utils.Response{data=models.Scholarship} "Scholarship details"
-// // @Router /scholarships/{id} [get]
-// func (ctrl *ScholarshipController) GetScholarshipByID(c *gin.Context) {
-// 	id, err := utils.GetIDParam(c, "id")
-// 	if err != nil {
-// 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid scholarship ID", err.Error())
+// // @Router /scholarships/{school_name} [get]
+// func (ctrl *ScholarshipController) GetScholarshipBySchoolName(c *gin.Context) {
+
+// 	schoolName := c.Param("school_name")
+// 	if schoolName == "" {
+// 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid school name", nil)
 // 		return
 // 	}
 
-// 	scholarship, err := ctrl.Queries.GetScholarshipByID(c, int32(id))
+// 	scholarship, err := ctrl.Queries.GetScholarshipBySchoolName(c, schoolName)
 // 	if err != nil {
 // 		utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
 // 		return

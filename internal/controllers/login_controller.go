@@ -51,9 +51,7 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 		return
 	}
 
-	roleStr, _ := user.Role.(string)
-
-	token, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, roleStr)
+	token, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, "student")
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not generate token", nil)
 		return

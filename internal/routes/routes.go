@@ -38,6 +38,8 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		RegisterAuthRoutes(api, db.DB, queries)
 		RegisterUserRoutes(api, db.DB, queries)
 
+		RegisterAdminRoutes(api, queries)
+
 		RegisterScholarshipRoutes(api, queries)
 	}
 }

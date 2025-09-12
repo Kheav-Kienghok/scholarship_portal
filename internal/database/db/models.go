@@ -99,6 +99,17 @@ func (ns NullOauthProvider) Value() (driver.Value, error) {
 	return string(ns.OauthProvider), nil
 }
 
+type Admin struct {
+	ID           int32          `json:"id"`
+	Fullname     sql.NullString `json:"fullname"`
+	Email        string         `json:"email"`
+	PasswordHash string         `json:"password_hash"`
+	TotpSecret   sql.NullString `json:"totp_secret"`
+	IsTwoFactor  bool           `json:"is_two_factor"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	UpdatedAt    sql.NullTime   `json:"updated_at"`
+}
+
 type OauthLogin struct {
 	ID             int32          `json:"id"`
 	UserID         sql.NullInt32  `json:"user_id"`
@@ -138,7 +149,6 @@ type User struct {
 	Fullname     sql.NullString `json:"fullname"`
 	Email        string         `json:"email"`
 	PasswordHash sql.NullString `json:"password_hash"`
-	Role         interface{}    `json:"role"`
 	PhoneNumber  sql.NullString `json:"phone_number"`
 	HighSchool   sql.NullString `json:"high_school"`
 	GradeLevel   sql.NullInt32  `json:"grade_level"`

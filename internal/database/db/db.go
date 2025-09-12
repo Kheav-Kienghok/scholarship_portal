@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.adminUpdateUserTOTPSecretStmt, err = db.PrepareContext(ctx, adminUpdateUserTOTPSecret); err != nil {
+		return nil, fmt.Errorf("error preparing query AdminUpdateUserTOTPSecret: %w", err)
+	}
 	if q.createScholarshipStmt, err = db.PrepareContext(ctx, createScholarship); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateScholarship: %w", err)
 	}
@@ -35,6 +38,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.enableAdmin2FAStmt, err = db.PrepareContext(ctx, enableAdmin2FA); err != nil {
+		return nil, fmt.Errorf("error preparing query EnableAdmin2FA: %w", err)
+	}
+	if q.getAdminByIDOrEmailStmt, err = db.PrepareContext(ctx, getAdminByIDOrEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAdminByIDOrEmail: %w", err)
 	}
 	if q.getAllScholarshipsStmt, err = db.PrepareContext(ctx, getAllScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllScholarships: %w", err)
@@ -59,6 +68,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.adminUpdateUserTOTPSecretStmt != nil {
+		if cerr := q.adminUpdateUserTOTPSecretStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing adminUpdateUserTOTPSecretStmt: %w", cerr)
+		}
+	}
 	if q.createScholarshipStmt != nil {
 		if cerr := q.createScholarshipStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createScholarshipStmt: %w", cerr)
@@ -77,6 +91,16 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.enableAdmin2FAStmt != nil {
+		if cerr := q.enableAdmin2FAStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing enableAdmin2FAStmt: %w", cerr)
+		}
+	}
+	if q.getAdminByIDOrEmailStmt != nil {
+		if cerr := q.getAdminByIDOrEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAdminByIDOrEmailStmt: %w", cerr)
 		}
 	}
 	if q.getAllScholarshipsStmt != nil {
@@ -148,10 +172,13 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                               DBTX
 	tx                               *sql.Tx
+	adminUpdateUserTOTPSecretStmt    *sql.Stmt
 	createScholarshipStmt            *sql.Stmt
 	createScholarshipWithDetailsStmt *sql.Stmt
 	createStudentProfileStmt         *sql.Stmt
 	createUserStmt                   *sql.Stmt
+	enableAdmin2FAStmt               *sql.Stmt
+	getAdminByIDOrEmailStmt          *sql.Stmt
 	getAllScholarshipsStmt           *sql.Stmt
 	getUserByIDOrEmailStmt           *sql.Stmt
 	getUserWithProfileStmt           *sql.Stmt
@@ -164,10 +191,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                               tx,
 		tx:                               tx,
+		adminUpdateUserTOTPSecretStmt:    q.adminUpdateUserTOTPSecretStmt,
 		createScholarshipStmt:            q.createScholarshipStmt,
 		createScholarshipWithDetailsStmt: q.createScholarshipWithDetailsStmt,
 		createStudentProfileStmt:         q.createStudentProfileStmt,
 		createUserStmt:                   q.createUserStmt,
+		enableAdmin2FAStmt:               q.enableAdmin2FAStmt,
+		getAdminByIDOrEmailStmt:          q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:           q.getAllScholarshipsStmt,
 		getUserByIDOrEmailStmt:           q.getUserByIDOrEmailStmt,
 		getUserWithProfileStmt:           q.getUserWithProfileStmt,
