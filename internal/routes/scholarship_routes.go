@@ -15,7 +15,7 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 
 	// Admin only
 	admin := api.Group("/scholarships")
-	admin.Use(middlewares.JWTAuthSingle("admin"))
+	admin.Use(middlewares.RequireAdminAuth())
 	{
 		admin.POST("", scholarshipController.CreateScholarship)
 		// admin.GET("/:id", scholarshipController.GetScholarshipByID)

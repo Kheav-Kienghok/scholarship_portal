@@ -20,11 +20,11 @@ func GeneratePresignedURL(bucketName, key string, client *s3.Client) (string, er
 		ResponseContentType:        aws.String("image/png"), // optional but good
 	}
 
-	// The URL expires after 15 minutes
+	// The URL expires after 12 hours
 	presignedReq, err := presignClient.PresignGetObject(
 		context.TODO(),
 		params,
-		s3.WithPresignExpires(24*time.Hour),
+		s3.WithPresignExpires(12*time.Hour),
 	)
 	if err != nil {
 		return "", err

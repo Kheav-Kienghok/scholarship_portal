@@ -1,22 +1,24 @@
 package tokens
 
 import (
+	"errors"
 	"time"
 
-	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("Scholarship") // Replace with your secure secret
+var jwtKey = []byte("Scholarship") // keep secure
 
-// GenerateToken creates a JWT token for a user
 func GenerateToken(id int32, fullname, email, role string) (string, error) {
 
-	claims := models.Claims{
-		ID:       int(id),
-		Fullname: fullname,
-		Email:    email,
-		Role:     role,
+	if role == "" {
+		role = "student" // set default if empty
+	}
+
+	claims := AdminClaims{
+		ID:    int32(id),
+		Email: email,
+		Role:  role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
@@ -24,22 +26,49 @@ func GenerateToken(id int32, fullname, email, role string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(jwtKey)
 }
 
-// ParseToken validates and parses a JWT token
-func ParseToken(tokenStr string) (*models.Claims, error) {
+func GenerateSetupToken(email string) (string, error) {
+	claims := AdminClaims{
+		Email:   email,
+		Purpose: "setup",
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		},
+	}
 
-	token, err := jwt.ParseWithClaims(tokenStr, &models.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
+}
+
+func ParseToken(tokenStr string) (ClaimsInterface, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if claims, ok := token.Claims.(*models.Claims); ok && token.Valid {
-		return claims, nil
+	claims, ok := token.Claims.(*UserClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
 	}
-	
-	return nil, jwt.ErrTokenInvalidClaims
+	return claims, nil
+}
+
+func ParseSetupToken(tokenStr string) (ClaimsInterface, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &AdminClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*AdminClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid setup token")
+	}
+	return claims, nil
 }

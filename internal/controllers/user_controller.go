@@ -8,6 +8,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/sqlc-dev/pqtype"
@@ -36,6 +37,22 @@ func sliceToNullRawMessage(slice []string) pqtype.NullRawMessage {
 	}
 }
 
+
+func getUserClaims(c *gin.Context) (*tokens.UserClaims, bool) {
+
+	claims, ok := c.Get("claims")
+	if !ok {
+		return nil, false
+	}
+
+	userClaims, ok := claims.(*tokens.UserClaims)
+	if !ok {
+		return nil, false
+	}
+
+	return userClaims, true
+}
+
 // UpdateProfile godoc
 // @Summary Update user and profile information
 // @Tags Users
@@ -46,13 +63,8 @@ func sliceToNullRawMessage(slice []string) pqtype.NullRawMessage {
 // @Security BearerAuth
 // @Router /update-profile [patch]
 func (u *UserController) UpdateUserAndProfile(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
-		return
-	}
 
-	userClaims, ok := claims.(*models.Claims)
+	userClaims, ok := getUserClaims(c)
 	if !ok {
 		utils.JSONIndent(c, http.StatusUnauthorized, "Invalid claims", nil)
 		return
@@ -61,7 +73,6 @@ func (u *UserController) UpdateUserAndProfile(c *gin.Context) {
 	// var req map[string]interface{}
 	var req models.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logging.Error("Failed to bind JSON: ", err)
 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
@@ -155,15 +166,10 @@ func (u *UserController) UpdateUserAndProfile(c *gin.Context) {
 // @Security BearerAuth
 // @Router /profile [get]
 func (u *UserController) GetUserProfile(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
-		return
-	}
 
-	userClaims, ok := claims.(*models.Claims)
+	userClaims, ok := getUserClaims(c)
 	if !ok {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Invalid claims", nil)
+		utils.JSONIndent(c, http.StatusUnauthorized, "Something went wrong!", nil)
 		return
 	}
 
@@ -176,8 +182,8 @@ func (u *UserController) GetUserProfile(c *gin.Context) {
 
 	userWithProfile, err := u.Queries.GetUserWithProfile(ctx, arg)
 	if err != nil {
-		logging.Error("Failed to get user profile: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to get user profile", nil)
+		logging.Error("[User Controller]: Failed to get user profile: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch user profile", nil)
 		return
 	}
 

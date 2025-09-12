@@ -13,10 +13,10 @@ func RegisterUserRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 
 	userController := controllers.UserControllerHandler(db, queries)
 
-	protected := api.Group("")
-	protected.Use(middlewares.JWTAuthSingle("student"))
+	userGroup := api.Group("/user")
+	userGroup.Use(middlewares.RequireUserAuth())
 	{
-		protected.GET("/profile", userController.GetUserProfile)
-		protected.PATCH("/update-profile", userController.UpdateUserAndProfile)
+		userGroup.GET("/profile", userController.GetUserProfile)
+		userGroup.PATCH("/update-profile", userController.UpdateUserAndProfile)
 	}
 }

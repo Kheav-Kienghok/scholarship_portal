@@ -69,16 +69,16 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 
 	// Validate OTP
 	valid, err := totp.ValidateCustom(
-		input.OTP, 
-		admin.TotpSecret.String, 
-		time.Now().UTC(), 
+		input.OTP,
+		admin.TotpSecret.String,
+		time.Now().UTC(),
 		totp.ValidateOpts{
 			Period:    30,
 			Skew:      1,
 			Digits:    otp.DigitsSix,
 			Algorithm: otp.AlgorithmSHA1,
 		},
-	) 
+	)
 
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to validate OTP", nil)
@@ -187,16 +187,16 @@ func (ctrl *AdminController) Verify2FAForAdmin(c *gin.Context) {
 
 	// Validate OTP
 	valid, err := totp.ValidateCustom(
-		input.OTP, 
-		admin.TotpSecret.String, 
-		time.Now().UTC(), 
+		input.OTP,
+		admin.TotpSecret.String,
+		time.Now().UTC(),
 		totp.ValidateOpts{
 			Period:    30,
 			Skew:      1,
 			Digits:    otp.DigitsSix,
 			Algorithm: otp.AlgorithmSHA1,
-		},	
-	) 
+		},
+	)
 
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to validate OTP", nil)
@@ -230,5 +230,5 @@ func getEmailFromJWT(c *gin.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return claims.Email, nil
+	return claims.GetEmail(), nil
 }

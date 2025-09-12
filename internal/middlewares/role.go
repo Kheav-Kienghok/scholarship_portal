@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
-	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +17,15 @@ func RequireRole(queries *db.Queries, role string) gin.HandlerFunc {
 
 		claims, exists := c.Get("claims")
 		if !exists {
-			utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
+			logging.Error("[Middleware]: Claims not found in context")
+			utils.JSONIndent(c, http.StatusUnauthorized, "Something went wrong!", nil)
 			c.Abort()
 			return
 		}
 
-		userClaims, ok := claims.(*models.Claims)
+		userClaims, ok := claims.(*tokens.UserClaims)
 		if !ok {
+			logging.Error("Invalid claims type")
 			utils.JSONIndent(c, http.StatusUnauthorized, "Invalid claims", nil)
 			c.Abort()
 			return
