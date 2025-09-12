@@ -1,6 +1,8 @@
 services:
   app-debug:
-    image: kienghok/scholarship_portals:debug
+    build:
+      context: .
+      target: debug
     container_name: scholarship_portal_debug
     ports:
       - "8080:8080"  # map container port 8080 to host port 8081
@@ -15,5 +17,4 @@ services:
       AWS_REGION: ${AWS_REGION}
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
       GIN_MODE: debug
-    tty: true
-    stdin_open: true
+    restart: unless-stopped

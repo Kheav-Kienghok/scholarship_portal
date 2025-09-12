@@ -1,0 +1,47 @@
+name: Deploy Scholarship Portal
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Build Docker image locally
+      run: make docker-debug
+
+    - name: Stop and remove old container (if exists)
+      run: docker rm -f scholarship_portal || true
+
+    - name: Run Docker Compose
+      run: docker-compose -f docker-compose.ci.yml up -d --build
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        GOOGLE_REDIRECT_URL: ${{ secrets.GOOGLE_REDIRECT_URL }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ VARS.AWS_REGION }}
+        AWS_BUCKET_NAME: ${{ VARS.AWS_BUCKET_NAME }}
+        GIN_MODE: debug
+
+    - name: Show logs if container exited
+      run: |
+        STATUS=$(docker inspect -f '{{.State.Status}}' scholarship_portal_debug)
+        if [ "$STATUS" != "running" ]; then
+          echo "Container crashed, printing logs:"
+          docker logs scholarship_portal_debug
+          exit 1
+        fi
