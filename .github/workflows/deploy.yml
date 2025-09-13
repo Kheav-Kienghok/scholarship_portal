@@ -40,7 +40,7 @@ jobs:
       run: docker pull kienghok/scholarship_portals:debug
 
     - name: Delete Old Container
-      run: docker rm -f scholarship_portal || true
+      run: docker-compose -f docker-compose.ci.yml down || true
 
     - name: Run Docker Compose in CI
       run: |

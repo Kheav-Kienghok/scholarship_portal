@@ -1,6 +1,8 @@
 package tokens
 
-import "github.com/golang-jwt/jwt/v5"
+import (
+	"github.com/golang-jwt/jwt/v5"
+)
 
 // AdminClaims defines the JWT claims structure for admin tokens (including 2FA setup)
 type AdminClaims struct {

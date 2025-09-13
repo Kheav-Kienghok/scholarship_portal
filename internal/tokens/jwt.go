@@ -43,6 +43,18 @@ func GenerateSetupToken(email string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
+func GenerateTempToken(email string) (string, error) {
+	claims := &AdminClaims{
+		Email:   email,
+		Purpose: "admin_2fa",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
+}
+
 func ParseToken(tokenStr string) (ClaimsInterface, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
@@ -69,6 +81,21 @@ func ParseSetupToken(tokenStr string) (ClaimsInterface, error) {
 	claims, ok := token.Claims.(*AdminClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid setup token")
+	}
+	return claims, nil
+}
+
+func ParseTempToken(tokenStr string) (ClaimsInterface, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &AdminClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*AdminClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid temporary token")
 	}
 	return claims, nil
 }

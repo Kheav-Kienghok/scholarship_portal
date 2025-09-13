@@ -24,22 +24,20 @@ func JWTAuth(allowedRolesOrPurposes ...string) gin.HandlerFunc {
 		tokenStr := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 
 		var claims tokens.ClaimsInterface
-		var err error
 
-		userClaims, err := tokens.ParseToken(tokenStr)
-		if err == nil {
-			claims = userClaims
-		} else {
-			// Fallback to Setup token
-			setupClaims, err := tokens.ParseSetupToken(tokenStr)
-			if err != nil {
-				logging.Error("Failed to parse token: ", err)
-				utils.JSONIndent(c, http.StatusUnauthorized, "Invalid token", nil)
-				c.Abort()
-				return
-			}
-			claims = setupClaims
-		}
+		// Try all token types in order of preference
+        if userClaims, err := tokens.ParseToken(tokenStr); err == nil {
+            claims = userClaims
+        } else if setupClaims, err := tokens.ParseSetupToken(tokenStr); err == nil {
+            claims = setupClaims
+        } else if serviceClaims, err := tokens.ParseTempToken(tokenStr); err == nil {
+            claims = serviceClaims
+        } else {
+            logging.Error("Failed to parse token: ", err)
+            utils.JSONIndent(c, http.StatusUnauthorized, "Invalid token", nil)
+            c.Abort()
+            return
+        }
 
 		if len(allowedRolesOrPurposes) > 0 {
 			allowed := false
@@ -62,7 +60,7 @@ func JWTAuth(allowedRolesOrPurposes ...string) gin.HandlerFunc {
 }
 
 func RequireAdminAuth() gin.HandlerFunc {
-	return JWTAuth("admin", "setup")
+	return JWTAuth("admin", "setup", "admin_2fa")
 }
 
 func RequireUserAuth() gin.HandlerFunc {
