@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,7 @@ func JWTAuth(allowedRolesOrPurposes ...string) gin.HandlerFunc {
 			// Fallback to Setup token
 			setupClaims, err := tokens.ParseSetupToken(tokenStr)
 			if err != nil {
+				logging.Error("Failed to parse token: ", err)
 				utils.JSONIndent(c, http.StatusUnauthorized, "Invalid token", nil)
 				c.Abort()
 				return

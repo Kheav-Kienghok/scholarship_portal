@@ -10,21 +10,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func GeneratePresignedURL(bucketName, key string, client *s3.Client) (string, error) {
+
+// base presign generator with dynamic expiry
+func generatePresignedURL(bucketName, key, contentType string, expiry time.Duration, client *s3.Client) (string, error) {
 	presignClient := s3.NewPresignClient(client)
 
 	params := &s3.GetObjectInput{
 		Bucket:                     &bucketName,
 		Key:                        &key,
-		ResponseContentDisposition: aws.String("inline"),    // <-- This forces browser to display
-		ResponseContentType:        aws.String("image/png"), // optional but good
+		ResponseContentDisposition: aws.String("inline"),
+		ResponseContentType:        aws.String(contentType),
 	}
 
-	// The URL expires after 12 hours
 	presignedReq, err := presignClient.PresignGetObject(
 		context.TODO(),
 		params,
-		s3.WithPresignExpires(12*time.Hour),
+		s3.WithPresignExpires(expiry),
 	)
 	if err != nil {
 		return "", err
@@ -33,6 +34,22 @@ func GeneratePresignedURL(bucketName, key string, client *s3.Client) (string, er
 	return presignedReq.URL, nil
 }
 
+// For scholarship logos (12h expiry)
+func GenerateScholarshipLogoURL(bucketName, key string, client *s3.Client) (string, error) {
+	return generatePresignedURL(bucketName, key, "image/png", 12*time.Hour, client)
+}
+
+// For institution logos (12h expiry)
+func GenerateInstitutionLogoURL(bucketName, key string, client *s3.Client) (string, error) {
+	return generatePresignedURL(bucketName, key, "image/png", 12*time.Hour, client)
+}
+
+// For QR codes (15 min expiry)
+func GenerateQRCodeURL(bucketName, key string, client *s3.Client) (string, error) {
+	return generatePresignedURL(bucketName, key, "image/png", 15*time.Minute, client)
+}
+
+// Sanitizer (unchanged)
 func SanitizeString(s string) string {
 	s = strings.TrimSpace(s)
 

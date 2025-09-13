@@ -1,8 +1,6 @@
 services:
   app-debug:
-    build:
-      context: .
-      target: debug
+    image: kienghok/scholarship_portals:debug
     container_name: scholarship_portal_debug
     ports:
       - "8080:8080"  # map container port 8080 to host port 8081
@@ -16,5 +14,4 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_REGION: ${AWS_REGION}
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
-      GIN_MODE: debug
-    restart: unless-stopped
+      GIN_MODE: debug 

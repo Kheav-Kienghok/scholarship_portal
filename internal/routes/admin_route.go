@@ -1,16 +1,18 @@
 package routes
 
 import (
+	"database/sql"
+
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
-	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterAdminRoutes(rg *gin.RouterGroup, queries *db.Queries) {
-	adminController := controllers.AdminControllerHandler(queries)
+func RegisterAdminRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries) {
+	adminController := controllers.AdminControllerHandler(db, queries)
 
-	admin := rg.Group("/admin")
+	admin := api.Group("/admin")
 	{
 		admin.POST("/login", adminController.AdminLogin)
 

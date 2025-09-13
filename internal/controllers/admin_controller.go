@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"bytes"
+	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -11,8 +13,10 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -22,10 +26,11 @@ import (
 
 type AdminController struct {
 	Queries *db.Queries
+	DB      *sql.DB
 }
 
-func AdminControllerHandler(queries *db.Queries) *AdminController {
-	return &AdminController{Queries: queries}
+func AdminControllerHandler(dbConn *sql.DB, queries *db.Queries) *AdminController {
+	return &AdminController{Queries: queries, DB: dbConn}
 }
 
 // Admin login with 2FA check
@@ -37,7 +42,16 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 		return
 	}
 
-	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{
+	tx, err := ctrl.DB.BeginTx(c, &sql.TxOptions{})
+	if err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to start transaction", nil)
+		return
+	}
+	defer tx.Rollback() // rollback if not committed
+
+	qtx := ctrl.Queries.WithTx(tx)
+
+	admin, err := qtx.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{
 		Email: input.Email,
 	})
 	if err != nil {
@@ -97,10 +111,16 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 		return
 	}
 
+	if err := tx.Commit(); err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to commit transaction", nil)
+		return
+	}
+
 	utils.JSONIndent(c, http.StatusOK, "Login successful", gin.H{
 		"token": token,
 	})
 }
+
 
 // Enable 2FA for admin
 func (ctrl *AdminController) Enable2FAForAdmin(c *gin.Context) {
@@ -146,9 +166,27 @@ func (ctrl *AdminController) Enable2FAForAdmin(c *gin.Context) {
 		return
 	}
 
+	// upload QR code to S3
+	qrKey := fmt.Sprintf("qr_code/2fa_qr_codes/%d.png", admin.ID)
+	_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: &storage.BucketName,
+		Key:    &qrKey,
+		Body:   bytes.NewReader(png),
+	})
+	if err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to upload QR code to S3", nil)
+		return
+	}
+
+	// generate presigned URL (15 min expiry)
+	qrURL, err := utils.GenerateQRCodeURL(storage.BucketName, qrKey, storage.S3Client)
+	if err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to generate presigned QR code URL", nil)
+		return
+	}
+
 	utils.JSONIndent(c, http.StatusOK, "2FA enabled", gin.H{
-		"qr_code_base64": base64.StdEncoding.EncodeToString(png),
-		"secret":         key.Secret(),
+		"qr_code_url": qrURL,
 	})
 }
 

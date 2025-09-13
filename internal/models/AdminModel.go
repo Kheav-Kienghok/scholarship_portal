@@ -8,6 +8,6 @@ type AdminRequestInput struct {
 }
 
 type Verify2FAInput struct {
-	Email string `json:"email" binding:"required"`
+	Email string `json:"email"`
 	OTP   string `json:"otp" binding:"required"`
 }

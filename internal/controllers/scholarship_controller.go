@@ -133,7 +133,7 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 
 		// Generate presigned URL if PhotoUrl is present
 		if s.PhotoUrl.Valid && s.PhotoUrl.String != "" {
-			url, err := utils.GeneratePresignedURL(storage.BucketName, s.PhotoUrl.String, storage.S3Client)
+			url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, s.PhotoUrl.String, storage.S3Client)
 			if err != nil {
 				logging.Error("Failed to generate presigned URL for scholarship ", s.ID, ": ", err)
 				sr.PhotoURL = nil // or keep original key

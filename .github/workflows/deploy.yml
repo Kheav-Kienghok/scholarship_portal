@@ -1,4 +1,4 @@
-name: Deploy Scholarship Portal
+name: CI
 
 on: 
   push:
@@ -9,21 +9,42 @@ on:
       - main
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      run: docker build --no-cache -t kienghok/scholarship_portals:debug --target debug . 
+
+    - name: Push Docker image
+      run: docker push kienghok/scholarship_portals:debug
+
   deploy:
+    needs: build
     runs-on: self-hosted
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build Docker image locally
-      run: make docker-debug
+    - name: Pull Docker image
+      run: docker pull kienghok/scholarship_portals:debug
 
-    - name: Stop and remove old container (if exists)
+    - name: Delete Old Container
       run: docker rm -f scholarship_portal || true
 
-    - name: Run Docker Compose
-      run: docker-compose -f docker-compose.ci.yml up -d --build
+    - name: Run Docker Compose in CI
+      run: |
+        docker-compose -f docker-compose.ci.yml up -d
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -36,12 +57,3 @@ jobs:
         AWS_REGION: ${{ VARS.AWS_REGION }}
         AWS_BUCKET_NAME: ${{ VARS.AWS_BUCKET_NAME }}
         GIN_MODE: debug
-
-    - name: Show logs if container exited
-      run: |
-        STATUS=$(docker inspect -f '{{.State.Status}}' scholarship_portal_debug)
-        if [ "$STATUS" != "running" ]; then
-          echo "Container crashed, printing logs:"
-          docker logs scholarship_portal_debug
-          exit 1
-        fi
