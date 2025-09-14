@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addFavoriteStmt, err = db.PrepareContext(ctx, addFavorite); err != nil {
+		return nil, fmt.Errorf("error preparing query AddFavorite: %w", err)
+	}
 	if q.adminUpdateUserTOTPSecretStmt, err = db.PrepareContext(ctx, adminUpdateUserTOTPSecret); err != nil {
 		return nil, fmt.Errorf("error preparing query AdminUpdateUserTOTPSecret: %w", err)
 	}
@@ -54,6 +57,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserWithProfileStmt, err = db.PrepareContext(ctx, getUserWithProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserWithProfile: %w", err)
 	}
+	if q.listFavoritesByUserStmt, err = db.PrepareContext(ctx, listFavoritesByUser); err != nil {
+		return nil, fmt.Errorf("error preparing query ListFavoritesByUser: %w", err)
+	}
+	if q.removeFavoriteStmt, err = db.PrepareContext(ctx, removeFavorite); err != nil {
+		return nil, fmt.Errorf("error preparing query RemoveFavorite: %w", err)
+	}
 	if q.updateStudentProfileStmt, err = db.PrepareContext(ctx, updateStudentProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStudentProfile: %w", err)
 	}
@@ -68,6 +77,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addFavoriteStmt != nil {
+		if cerr := q.addFavoriteStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addFavoriteStmt: %w", cerr)
+		}
+	}
 	if q.adminUpdateUserTOTPSecretStmt != nil {
 		if cerr := q.adminUpdateUserTOTPSecretStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing adminUpdateUserTOTPSecretStmt: %w", cerr)
@@ -116,6 +130,16 @@ func (q *Queries) Close() error {
 	if q.getUserWithProfileStmt != nil {
 		if cerr := q.getUserWithProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserWithProfileStmt: %w", cerr)
+		}
+	}
+	if q.listFavoritesByUserStmt != nil {
+		if cerr := q.listFavoritesByUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listFavoritesByUserStmt: %w", cerr)
+		}
+	}
+	if q.removeFavoriteStmt != nil {
+		if cerr := q.removeFavoriteStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing removeFavoriteStmt: %w", cerr)
 		}
 	}
 	if q.updateStudentProfileStmt != nil {
@@ -172,6 +196,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                               DBTX
 	tx                               *sql.Tx
+	addFavoriteStmt                  *sql.Stmt
 	adminUpdateUserTOTPSecretStmt    *sql.Stmt
 	createScholarshipStmt            *sql.Stmt
 	createScholarshipWithDetailsStmt *sql.Stmt
@@ -182,6 +207,8 @@ type Queries struct {
 	getAllScholarshipsStmt           *sql.Stmt
 	getUserByIDOrEmailStmt           *sql.Stmt
 	getUserWithProfileStmt           *sql.Stmt
+	listFavoritesByUserStmt          *sql.Stmt
+	removeFavoriteStmt               *sql.Stmt
 	updateStudentProfileStmt         *sql.Stmt
 	updateUserProfileStmt            *sql.Stmt
 	upsertOauthLoginStmt             *sql.Stmt
@@ -191,6 +218,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                               tx,
 		tx:                               tx,
+		addFavoriteStmt:                  q.addFavoriteStmt,
 		adminUpdateUserTOTPSecretStmt:    q.adminUpdateUserTOTPSecretStmt,
 		createScholarshipStmt:            q.createScholarshipStmt,
 		createScholarshipWithDetailsStmt: q.createScholarshipWithDetailsStmt,
@@ -201,6 +229,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAllScholarshipsStmt:           q.getAllScholarshipsStmt,
 		getUserByIDOrEmailStmt:           q.getUserByIDOrEmailStmt,
 		getUserWithProfileStmt:           q.getUserWithProfileStmt,
+		listFavoritesByUserStmt:          q.listFavoritesByUserStmt,
+		removeFavoriteStmt:               q.removeFavoriteStmt,
 		updateStudentProfileStmt:         q.updateStudentProfileStmt,
 		updateUserProfileStmt:            q.updateUserProfileStmt,
 		upsertOauthLoginStmt:             q.upsertOauthLoginStmt,

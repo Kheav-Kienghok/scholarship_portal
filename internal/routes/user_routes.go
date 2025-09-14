@@ -12,6 +12,16 @@ import (
 func RegisterUserRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries) {
 
 	userController := controllers.UserControllerHandler(db, queries)
+	favoriteController := controllers.FavoriteControllerHandler(queries)
+
+	favoriteGroup := api.Group("/favorites")
+	favoriteGroup.Use(middlewares.RequireUserAuth())
+	{
+		favoriteGroup.GET("/", favoriteController.ListFavorites)
+		favoriteGroup.POST("/", favoriteController.AddFavorite)
+
+		favoriteGroup.DELETE("/:scholarship_id", favoriteController.RemoveFavorite)
+	}
 
 	userGroup := api.Group("/user")
 	userGroup.Use(middlewares.RequireUserAuth())

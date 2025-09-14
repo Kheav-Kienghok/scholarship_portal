@@ -29,7 +29,7 @@ func NewGoogleAuthHandler(queries *db.Queries) *GoogleAuthHandler {
 }
 
 // generateRandomState creates a URL-safe random string
-func generateRandomState() string {
+func GenerateRandomState() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		panic(err) // or handle gracefully
@@ -50,21 +50,10 @@ func getGoogleOAuthConfig() *oauth2.Config {
 	}
 }
 
-// func (h *GoogleAuthHandler) GetLoginURL(c *gin.Context) {
-// 	cfg := getGoogleOAuthConfig()
-// 	state := generateRandomState()
-
-// 	loginURL := cfg.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-// 	// loginURL := cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
-// 	utils.JSONIndent(c, http.StatusOK, "Success", gin.H{
-// 		"login_url": loginURL,
-// 	})
-// }
-
 func (h *GoogleAuthHandler) GoogleLogin(c *gin.Context) {
 
 	cfg := getGoogleOAuthConfig()
-	state := generateRandomState()
+	state := GenerateRandomState()
 
 	url := cfg.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	// url := cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)

@@ -13,6 +13,7 @@ type AdminClaims struct {
 	jwt.RegisteredClaims
 }
 
+func (c *AdminClaims) GetID() int64       { return int64(c.ID) }
 func (c *AdminClaims) GetEmail() string   { return c.Email }
 func (c *AdminClaims) GetRole() string    { return c.Role }
 func (c *AdminClaims) GetPurpose() string { return c.Purpose }

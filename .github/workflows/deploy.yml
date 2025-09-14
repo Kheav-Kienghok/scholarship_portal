@@ -57,3 +57,16 @@ jobs:
         AWS_REGION: ${{ VARS.AWS_REGION }}
         AWS_BUCKET_NAME: ${{ VARS.AWS_BUCKET_NAME }}
         GIN_MODE: debug
+
+    - name: Check running containers
+      run: |
+        sleep 10  # Wait a bit for containers to start
+        docker-compose -f docker-compose.ci.yml ps
+        
+        if ! docker-compose -f docker-compose.ci.yml ps | grep "Up"; then
+          echo "❌ Container failed to start!"
+          docker-compose -f docker-compose.ci.yml logs
+          exit 1
+        else
+          echo "✅ Container is running."
+        fi

@@ -110,6 +110,12 @@ type Admin struct {
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 }
 
+type FavoriteScholarship struct {
+	UserID        int64        `json:"user_id"`
+	ScholarshipID int64        `json:"scholarship_id"`
+	CreatedAt     sql.NullTime `json:"created_at"`
+}
+
 type OauthLogin struct {
 	ID             int32          `json:"id"`
 	UserID         sql.NullInt32  `json:"user_id"`

@@ -11,6 +11,7 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
+func (c *UserClaims) GetID() int64        { return int64(c.ID) }
 func (c *UserClaims) GetEmail() string    { return c.Email }
 func (c *UserClaims) GetRole() string     { return c.Role }
 func (c *UserClaims) GetPurpose() string  { return c.Purpose }
