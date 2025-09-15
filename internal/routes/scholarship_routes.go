@@ -22,4 +22,11 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 		// admin.PUT("/:id", scholarshipController.UpdateScholarship)
 		// admin.DELETE("/:id", scholarshipController.DeleteScholarship)
 	}
+
+	// User authenticated
+	user := api.Group("/scholarships")
+	user.Use(middlewares.RequireUserAuth())
+	{
+		user.GET("/search", scholarshipController.SearchScholarships)
+	}
 }

@@ -130,7 +130,7 @@ func (q *Queries) GetScholarshipByID(ctx context.Context, id int32) (GetScholars
 }
 
 const getScholarshipsByIDs = `-- name: GetScholarshipsByIDs :many
-SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
 FROM scholarships
 WHERE id = ANY($1::int[])
 `
@@ -157,6 +157,106 @@ func (q *Queries) GetScholarshipsByIDs(ctx context.Context, dollar_1 []int32) ([
 			&i.PhotoUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.InstitutionCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getScholarshipsByInstitutionCodeLike = `-- name: GetScholarshipsByInstitutionCodeLike :many
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+FROM scholarships
+WHERE institution_code ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) GetScholarshipsByInstitutionCodeLike(ctx context.Context, code sql.NullString) ([]Scholarship, error) {
+	rows, err := q.query(ctx, q.getScholarshipsByInstitutionCodeLikeStmt, getScholarshipsByInstitutionCodeLike, code)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Scholarship
+	for rows.Next() {
+		var i Scholarship
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Provider,
+			&i.Description,
+			&i.InstitutionInfo,
+			&i.Requirements,
+			&i.ExtraNotes,
+			&i.DeadlineEnd,
+			&i.OfficialLink,
+			&i.PhotoUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.InstitutionCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchScholarships = `-- name: SearchScholarships :many
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+FROM scholarships
+WHERE (institution_code ILIKE '%' || $1 || '%' OR $1 IS NULL)
+  AND (institution_info->0->>'institution' ILIKE '%' || $2 || '%' OR $2 IS NULL)
+  AND (
+        EXISTS (
+            SELECT 1 FROM jsonb_array_elements(institution_info->0->'programs_offered') AS p
+            WHERE p->>0 ILIKE '%' || $3 || '%'
+        ) OR $3 IS NULL
+      )
+`
+
+type SearchScholarshipsParams struct {
+	Code    sql.NullString `json:"code"`
+	Name    sql.NullString `json:"name"`
+	Program sql.NullString `json:"program"`
+}
+
+func (q *Queries) SearchScholarships(ctx context.Context, arg SearchScholarshipsParams) ([]Scholarship, error) {
+	rows, err := q.query(ctx, q.searchScholarshipsStmt, searchScholarships, arg.Code, arg.Name, arg.Program)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Scholarship
+	for rows.Next() {
+		var i Scholarship
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Provider,
+			&i.Description,
+			&i.InstitutionInfo,
+			&i.Requirements,
+			&i.ExtraNotes,
+			&i.DeadlineEnd,
+			&i.OfficialLink,
+			&i.PhotoUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.InstitutionCode,
 		); err != nil {
 			return nil, err
 		}

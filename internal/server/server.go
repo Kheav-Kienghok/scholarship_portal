@@ -23,16 +23,17 @@ type Server struct {
 func NewServer(port string, db *database.Database) *Server {
 
 	router := gin.Default()
+	_ = router.SetTrustedProxies(nil)
 	router.Use(logging.GinLogger())
 	router.Use(middlewares.RequestLogger()) // Add your custom middleware her
 
 	// Setup routes
 	routes.SetupRoutes(router, db)
 
-    // Handle unknown paths with JSON 404
-    router.NoRoute(func(c *gin.Context) {
-        utils.JSONIndent(c, http.StatusNotFound, "404 Not Found", nil)
-    })
+	// Handle unknown paths with JSON 404
+	router.NoRoute(func(c *gin.Context) {
+		utils.JSONIndent(c, http.StatusNotFound, "404 Not Found", nil)
+	})
 
 	return &Server{
 		router: router,

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -77,64 +76,42 @@ func validateAdminOTP(admin *db.Admin, otp string) error {
 }
 
 func (ctrl *AdminController) AdminLogin(c *gin.Context) {
-
-	data, err := c.GetRawData()
-	if err != nil || len(data) == 0 {
-		utils.RespondBadRequest(c, "Empty request body", nil)
-		return
-	}
-
-	// Try OTP first
-	var otpInput models.AdminOTPInput
-	if err := json.Unmarshal(data, &otpInput); err == nil && otpInput.OTP != "" {
-		ctrl.handleStep2(c, otpInput)
-		return
-	}
-
-	// Otherwise try login
 	var loginInput models.AdminLoginInput
-	if err := json.Unmarshal(data, &loginInput); err != nil {
-		logging.Error("Failed to parse login input: ", err)
+	if err := c.ShouldBindJSON(&loginInput); err != nil {
+		logging.Error("Failed to bind login input: ", err)
 		utils.RespondBadRequest(c, "Invalid input", err.Error())
 		return
 	}
 
-	ctrl.handleStep1(c, loginInput)
-}
-
-func (ctrl *AdminController) handleStep1(c *gin.Context, loginInput models.AdminLoginInput) {
-
-	tx, err := ctrl.DB.BeginTx(c, &sql.TxOptions{})
-	if err != nil {
-		utils.RespondInternalError(c, "Failed to start transaction")
-		return
-	}
-	defer tx.Rollback()
-	qtx := ctrl.Queries.WithTx(tx)
-
-	admin, err := qtx.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{Email: loginInput.Email})
+	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{Email: loginInput.Email})
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(loginInput.Password)) != nil {
-		utils.RespondUnauthorized(c, "Incorrect Credential")
+		utils.RespondUnauthorized(c, "Incorrect credentials")
 		return
 	}
 
 	if !admin.IsTwoFactor {
-		logging.Info("2FA not enabled, issuing setup token")
 		setupToken, _ := tokens.GenerateSetupToken(admin.Email)
-		utils.RespondOK(c, "Required to setup 2 Factor Auth", gin.H{
+		utils.RespondOK(c, "Required to setup 2FA", gin.H{
 			"setup_token": setupToken,
 			"next":        "/admin/enable-2fa",
 		})
 		return
 	}
 
+	// 2FA enabled → issue temp token for OTP step
 	tempToken, _ := tokens.GenerateTempToken(admin.Email)
-	utils.RespondOK(c, "OTP required", gin.H{
-		"temp_token": tempToken,
-	})
+	utils.RespondOK(c, "OTP required", gin.H{"temp_token": tempToken})
 }
 
-func (ctrl *AdminController) handleStep2(c *gin.Context, otpInput models.AdminOTPInput) {
+func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
+	
+	var otpInput models.AdminOTPInput
+	if err := c.ShouldBindJSON(&otpInput); err != nil {
+		logging.Error("Failed to bind OTP input: ", err)
+		utils.RespondBadRequest(c, "Invalid input", err.Error())
+		return
+	}
+
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		utils.RespondUnauthorized(c, "Missing temp token")
@@ -150,7 +127,7 @@ func (ctrl *AdminController) handleStep2(c *gin.Context, otpInput models.AdminOT
 
 	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{Email: claims.GetEmail()})
 	if err != nil {
-		utils.RespondUnauthorized(c, "Incorrect Credential")
+		utils.RespondUnauthorized(c, "Incorrect credentials")
 		return
 	}
 

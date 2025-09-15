@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
 
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/builder"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
@@ -121,6 +123,10 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 // @Success 200 {object} utils.Response{data=[]models.Scholarship} "List of scholarships"
 // @Router /scholarships [get]
 func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
+
+	// responses := utils.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	// utils.RespondOK(c, "Scholarships fetched", responses)
+
 	scholarships, err := ctrl.Queries.GetAllScholarships(c)
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not fetch scholarships", err.Error())
@@ -129,7 +135,7 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 
 	var response []models.ScholarshipResponse
 	for _, s := range scholarships {
-		sr := utils.MapScholarship(s)
+		sr := builder.MapScholarship(s)
 
 		// Generate presigned URL if PhotoUrl is present
 		if s.PhotoUrl.Valid && s.PhotoUrl.String != "" {
@@ -148,29 +154,37 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 	utils.JSONIndent(c, http.StatusOK, "List of scholarships", response)
 }
 
-// // // GetScholarshipBySchoolName godoc
-// // @Summary Get a scholarship by school name
-// // @Tags Scholarships
-// // @Produce json
-// // @Param school_name path string true "School Name"
-// // @Success 200 {object} utils.Response{data=models.Scholarship} "Scholarship details"
-// // @Router /scholarships/{school_name} [get]
-// func (ctrl *ScholarshipController) GetScholarshipBySchoolName(c *gin.Context) {
+func (ctrl *ScholarshipController) SearchScholarships(c *gin.Context) {
+	code := c.Query("code")
+	name := c.Query("name")
+	program := c.Query("program")
 
-// 	schoolName := c.Param("school_name")
-// 	if schoolName == "" {
-// 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid school name", nil)
-// 		return
-// 	}
+	var scholarships []db.Scholarship
+	var err error
 
-// 	scholarship, err := ctrl.Queries.GetScholarshipBySchoolName(c, schoolName)
-// 	if err != nil {
-// 		utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
-// 		return
-// 	}
+	// Case 1: only code
+	if code != "" && name == "" && program == "" {
+		scholarships, err = ctrl.Queries.GetScholarshipsByInstitutionCodeLike(c, sql.NullString{String: code, Valid: true})
+	} else {
+		// Flexible search with multiple conditions
+		params := db.SearchScholarshipsParams{
+			Code:    sql.NullString{String: code, Valid: code != ""},
+			Name:    sql.NullString{String: name, Valid: name != ""},
+			Program: sql.NullString{String: program, Valid: program != ""},
+		}
+		scholarships, err = ctrl.Queries.SearchScholarships(c, params)
+	}
 
-// 	utils.JSONIndent(c, http.StatusOK, "Scholarship details", scholarship)
-// }
+	if err != nil || len(scholarships) == 0 {
+		utils.JSONIndent(c, http.StatusNotFound, "No scholarships found", nil)
+		return
+	}
+
+	// Use the correct builder for db.Scholarship
+	response := builder.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+
+	utils.JSONIndent(c, http.StatusOK, "Search results", response)
+}
 
 // // DeleteScholarship godoc
 // // @Summary Delete a scholarship by ID

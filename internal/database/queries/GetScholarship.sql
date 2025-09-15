@@ -34,3 +34,21 @@ WHERE id = $1;
 SELECT *
 FROM scholarships
 WHERE id = ANY($1::int[]);
+
+
+-- name: GetScholarshipsByInstitutionCodeLike :many
+SELECT *
+FROM scholarships
+WHERE institution_code ILIKE '%' || sqlc.arg('code') || '%';
+
+-- name: SearchScholarships :many
+SELECT *
+FROM scholarships
+WHERE (institution_code ILIKE '%' || sqlc.arg('code') || '%' OR sqlc.arg('code') IS NULL)
+  AND (institution_info->0->>'institution' ILIKE '%' || sqlc.arg('name') || '%' OR sqlc.arg('name') IS NULL)
+  AND (
+        EXISTS (
+            SELECT 1 FROM jsonb_array_elements(institution_info->0->'programs_offered') AS p
+            WHERE p->>0 ILIKE '%' || sqlc.arg('program') || '%'
+        ) OR sqlc.arg('program') IS NULL
+      );

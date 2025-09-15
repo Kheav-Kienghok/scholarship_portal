@@ -15,6 +15,7 @@ func RegisterAdminRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Que
 	admin := api.Group("/admin")
 	{
 		admin.POST("/login", adminController.AdminLogin)
+		admin.POST("/verify-otp", adminController.VerifyAdminOTP)
 
 		// Require JWT for 2FA setup and verification
 		adminAuth := admin.Group("/")

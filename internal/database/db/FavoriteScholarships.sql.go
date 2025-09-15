@@ -31,8 +31,7 @@ func (q *Queries) AddFavorite(ctx context.Context, arg AddFavoriteParams) error 
 
 const listFavoritesByUser = `-- name: ListFavoritesByUser :many
 SELECT 
-    f.scholarship_id,
-    s.id,
+    s.id AS scholarship_id,
     s.title,
     s.provider,
     s.description,
@@ -50,8 +49,7 @@ ORDER BY f.created_at DESC
 `
 
 type ListFavoritesByUserRow struct {
-	ScholarshipID   int64                 `json:"scholarship_id"`
-	ID              int32                 `json:"id"`
+	ScholarshipID   int32                 `json:"scholarship_id"`
 	Title           string                `json:"title"`
 	Provider        string                `json:"provider"`
 	Description     sql.NullString        `json:"description"`
@@ -76,7 +74,6 @@ func (q *Queries) ListFavoritesByUser(ctx context.Context, userID int64) ([]List
 		var i ListFavoritesByUserRow
 		if err := rows.Scan(
 			&i.ScholarshipID,
-			&i.ID,
 			&i.Title,
 			&i.Provider,
 			&i.Description,

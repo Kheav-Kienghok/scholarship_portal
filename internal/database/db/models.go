@@ -140,6 +140,7 @@ type Scholarship struct {
 	PhotoUrl        sql.NullString        `json:"photo_url"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 	UpdatedAt       sql.NullTime          `json:"updated_at"`
+	InstitutionCode sql.NullString        `json:"institution_code"`
 }
 
 type StudentProfile struct {

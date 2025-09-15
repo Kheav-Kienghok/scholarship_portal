@@ -1,19 +1,17 @@
 package controllers
 
 import (
-	"database/sql"
-	"encoding/json"
 	"errors"
 	"strconv"
-	"time"
 
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/builder"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/sqlc-dev/pqtype"
 )
 
 type FavoriteController struct {
@@ -46,34 +44,6 @@ func (ctrl *FavoriteController) getUserIDOrAbort(c *gin.Context) int64 {
 		return 0
 	}
 	return userID
-}
-
-func nullStringToString(ns sql.NullString) string {
-	if ns.Valid {
-		return ns.String
-	}
-	return ""
-}
-
-func nullRawMessageToJSON(n pqtype.NullRawMessage) json.RawMessage {
-	if n.Valid {
-		return n.RawMessage
-	}
-	return json.RawMessage("null")
-}
-
-func nullTimeToPtr(nt sql.NullTime) *time.Time {
-	if nt.Valid {
-		return &nt.Time
-	}
-	return nil
-}
-
-func nullStringToPtr(ns sql.NullString) *string {
-	if ns.Valid {
-		return &ns.String
-	}
-	return nil
 }
 
 // AddFavorite adds a scholarship to the user's favorites
@@ -151,7 +121,7 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 	}
 
 	// Prepare IDs for batch query
-	scholarshipIDs := make([]int32, len(favorites)) 
+	scholarshipIDs := make([]int32, len(favorites))
 	for i, fav := range favorites {
 		scholarshipIDs[i] = int32(fav.ScholarshipID)
 	}
@@ -165,24 +135,8 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 	}
 
 	// Map to response
-	scholarships := make([]models.ScholarshipResponse, len(dbScholarships))
-	for i, s := range dbScholarships {
-		scholarships[i] = models.ScholarshipResponse{
-			ID:              int(s.ID),
-			Title:           s.Title,
-			Provider:        s.Provider,
-			Description:     nullStringToString(s.Description),
-			InstitutionInfo: nullRawMessageToJSON(s.InstitutionInfo),
-			Requirements:    nullRawMessageToJSON(s.Requirements),
-			ExtraNotes:      nullStringToString(s.ExtraNotes),
-			DeadlineEnd:     nullTimeToPtr(s.DeadlineEnd),
-			OfficialLink:    nullStringToPtr(s.OfficialLink),
-			PhotoURL:        nullStringToPtr(s.PhotoUrl),
-			CreatedAt:       *nullTimeToPtr(s.CreatedAt),
-		}
-	}
-
+	responses := builder.BuildScholarshipResponses(dbScholarships, storage.S3Client, storage.BucketName)
 	utils.RespondOK(c, "Favorites fetched", models.FavoriteScholarshipListResponse{
-		Favorites: scholarships,
+		Favorites: responses,
 	})
 }

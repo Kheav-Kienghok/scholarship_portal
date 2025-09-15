@@ -12,8 +12,7 @@ WHERE user_id = $1 AND scholarship_id = $2;
 -- List all favorites for a user (joined with scholarships)
 -- name: ListFavoritesByUser :many
 SELECT 
-    f.scholarship_id,
-    s.id,
+    s.id AS scholarship_id,
     s.title,
     s.provider,
     s.description,
