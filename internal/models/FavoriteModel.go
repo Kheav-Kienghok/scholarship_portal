@@ -11,22 +11,17 @@ type CreateFavoriteRequest struct {
 	ScholarshipID int32 `json:"scholarship_id,omitempty"`
 }
 
-type FavoriteScholarshipListResponse struct {
-	Favorites []FavoriteScholarship `json:"favorites"`
+type ListFavoritesByUserRow struct {
+    ID            int32
+    UserID        int32
+    ScholarshipID int32
 }
 
-type CreateFavoriteScholarshipRequest struct {
-	UserID        int32 `json:"user_id" binding:"required"`
-	ScholarshipID int32 `json:"scholarship_id" binding:"required"`
+type FavoriteScholarshipListResponse struct {
+	Favorites []ScholarshipResponse
 }
 
 type DeleteFavoriteScholarshipRequest struct {
 	UserID        int32 `json:"user_id" binding:"required"`
 	ScholarshipID int32 `json:"scholarship_id" binding:"required"`
-}
-
-type FavoriteScholarshipResponse struct {
-	ID            int32 `json:"id"`
-	UserID        int32 `json:"user_id"`
-	ScholarshipID int32 `json:"scholarship_id"`
 }

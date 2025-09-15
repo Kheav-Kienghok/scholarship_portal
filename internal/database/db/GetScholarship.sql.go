@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/lib/pq"
 	"github.com/sqlc-dev/pqtype"
 )
 
@@ -64,6 +65,98 @@ func (q *Queries) GetAllScholarships(ctx context.Context) ([]GetAllScholarshipsR
 			&i.OfficialLink,
 			&i.PhotoUrl,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getScholarshipByID = `-- name: GetScholarshipByID :one
+SELECT 
+    id AS scholarship_id,
+    title,
+    provider,
+    description,
+    institution_info,
+    requirements,
+    extra_notes,
+    deadline_end,
+    official_link,
+    photo_url,
+    created_at
+FROM scholarships
+WHERE id = $1
+`
+
+type GetScholarshipByIDRow struct {
+	ScholarshipID   int32                 `json:"scholarship_id"`
+	Title           string                `json:"title"`
+	Provider        string                `json:"provider"`
+	Description     sql.NullString        `json:"description"`
+	InstitutionInfo pqtype.NullRawMessage `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+	ExtraNotes      sql.NullString        `json:"extra_notes"`
+	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
+	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
+	CreatedAt       sql.NullTime          `json:"created_at"`
+}
+
+func (q *Queries) GetScholarshipByID(ctx context.Context, id int32) (GetScholarshipByIDRow, error) {
+	row := q.queryRow(ctx, q.getScholarshipByIDStmt, getScholarshipByID, id)
+	var i GetScholarshipByIDRow
+	err := row.Scan(
+		&i.ScholarshipID,
+		&i.Title,
+		&i.Provider,
+		&i.Description,
+		&i.InstitutionInfo,
+		&i.Requirements,
+		&i.ExtraNotes,
+		&i.DeadlineEnd,
+		&i.OfficialLink,
+		&i.PhotoUrl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getScholarshipsByIDs = `-- name: GetScholarshipsByIDs :many
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at
+FROM scholarships
+WHERE id = ANY($1::int[])
+`
+
+func (q *Queries) GetScholarshipsByIDs(ctx context.Context, dollar_1 []int32) ([]Scholarship, error) {
+	rows, err := q.query(ctx, q.getScholarshipsByIDsStmt, getScholarshipsByIDs, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Scholarship
+	for rows.Next() {
+		var i Scholarship
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Provider,
+			&i.Description,
+			&i.InstitutionInfo,
+			&i.Requirements,
+			&i.ExtraNotes,
+			&i.DeadlineEnd,
+			&i.OfficialLink,
+			&i.PhotoUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

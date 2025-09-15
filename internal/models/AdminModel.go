@@ -13,7 +13,7 @@ type AdminLoginInput struct {
 }
 
 type AdminOTPInput struct {
-	OTP string `json:"otp" binding:"required" example:"123456"`
+	OTP string `json:"otp" example:"123456"`
 }
 
 type Verify2FAInput struct {

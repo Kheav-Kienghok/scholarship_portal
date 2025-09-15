@@ -7,6 +7,9 @@ package db
 
 import (
 	"context"
+	"database/sql"
+
+	"github.com/sqlc-dev/pqtype"
 )
 
 const addFavorite = `-- name: AddFavorite :exec
@@ -20,29 +23,59 @@ type AddFavoriteParams struct {
 	ScholarshipID int64 `json:"scholarship_id"`
 }
 
+// Add a favorite
 func (q *Queries) AddFavorite(ctx context.Context, arg AddFavoriteParams) error {
 	_, err := q.exec(ctx, q.addFavoriteStmt, addFavorite, arg.UserID, arg.ScholarshipID)
 	return err
 }
 
 const listFavoritesByUser = `-- name: ListFavoritesByUser :many
-SELECT s.id, s.title, s.provider, s.description, s.institution_info, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at, s.updated_at
+SELECT 
+    f.scholarship_id,
+    s.id,
+    s.title,
+    s.provider,
+    s.description,
+    s.institution_info,
+    s.requirements,
+    s.extra_notes,
+    s.deadline_end,
+    s.official_link,
+    s.photo_url,
+    s.created_at
 FROM favorite_scholarships f
 JOIN scholarships s ON f.scholarship_id = s.id
 WHERE f.user_id = $1
 ORDER BY f.created_at DESC
 `
 
-func (q *Queries) ListFavoritesByUser(ctx context.Context, userID int64) ([]Scholarship, error) {
+type ListFavoritesByUserRow struct {
+	ScholarshipID   int64                 `json:"scholarship_id"`
+	ID              int32                 `json:"id"`
+	Title           string                `json:"title"`
+	Provider        string                `json:"provider"`
+	Description     sql.NullString        `json:"description"`
+	InstitutionInfo pqtype.NullRawMessage `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+	ExtraNotes      sql.NullString        `json:"extra_notes"`
+	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
+	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
+	CreatedAt       sql.NullTime          `json:"created_at"`
+}
+
+// List all favorites for a user (joined with scholarships)
+func (q *Queries) ListFavoritesByUser(ctx context.Context, userID int64) ([]ListFavoritesByUserRow, error) {
 	rows, err := q.query(ctx, q.listFavoritesByUserStmt, listFavoritesByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Scholarship
+	var items []ListFavoritesByUserRow
 	for rows.Next() {
-		var i Scholarship
+		var i ListFavoritesByUserRow
 		if err := rows.Scan(
+			&i.ScholarshipID,
 			&i.ID,
 			&i.Title,
 			&i.Provider,
@@ -54,7 +87,6 @@ func (q *Queries) ListFavoritesByUser(ctx context.Context, userID int64) ([]Scho
 			&i.OfficialLink,
 			&i.PhotoUrl,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -79,6 +111,7 @@ type RemoveFavoriteParams struct {
 	ScholarshipID int64 `json:"scholarship_id"`
 }
 
+// Remove a favorite
 func (q *Queries) RemoveFavorite(ctx context.Context, arg RemoveFavoriteParams) error {
 	_, err := q.exec(ctx, q.removeFavoriteStmt, removeFavorite, arg.UserID, arg.ScholarshipID)
 	return err

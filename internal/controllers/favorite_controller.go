@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
@@ -10,6 +13,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type FavoriteController struct {
@@ -35,12 +39,48 @@ func getUserIDFromClaims(c *gin.Context) (int64, error) {
 	return userClaims.GetID(), nil
 }
 
-// AddFavorite adds a scholarship to the user's favorites
-func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
-
+func (ctrl *FavoriteController) getUserIDOrAbort(c *gin.Context) int64 {
 	userID, err := getUserIDFromClaims(c)
 	if err != nil {
 		utils.RespondUnauthorized(c, err.Error())
+		return 0
+	}
+	return userID
+}
+
+func nullStringToString(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
+}
+
+func nullRawMessageToJSON(n pqtype.NullRawMessage) json.RawMessage {
+	if n.Valid {
+		return n.RawMessage
+	}
+	return json.RawMessage("null")
+}
+
+func nullTimeToPtr(nt sql.NullTime) *time.Time {
+	if nt.Valid {
+		return &nt.Time
+	}
+	return nil
+}
+
+func nullStringToPtr(ns sql.NullString) *string {
+	if ns.Valid {
+		return &ns.String
+	}
+	return nil
+}
+
+// AddFavorite adds a scholarship to the user's favorites
+func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
+
+	userID := ctrl.getUserIDOrAbort(c)
+	if userID == 0 {
 		return
 	}
 
@@ -49,7 +89,7 @@ func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
 		return
 	}
 
-	err = ctrl.Queries.AddFavorite(c, db.AddFavoriteParams{
+	err := ctrl.Queries.AddFavorite(c, db.AddFavoriteParams{
 		UserID:        userID,
 		ScholarshipID: int64(req.ScholarshipID),
 	})
@@ -65,9 +105,8 @@ func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
 // RemoveFavorite removes a scholarship from the user's favorites
 func (ctrl *FavoriteController) RemoveFavorite(c *gin.Context) {
 
-	userID, err := getUserIDFromClaims(c)
-	if err != nil {
-		utils.RespondUnauthorized(c, err.Error())
+	userID := ctrl.getUserIDOrAbort(c)
+	if userID == 0 {
 		return
 	}
 
@@ -93,17 +132,57 @@ func (ctrl *FavoriteController) RemoveFavorite(c *gin.Context) {
 // ListFavorites lists all favorites for the user
 func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 
-	userID, err := getUserIDFromClaims(c)
-	if err != nil {
-		utils.RespondUnauthorized(c, err.Error())
+	userID := ctrl.getUserIDOrAbort(c)
+	if userID == 0 {
 		return
 	}
 
+	// Fetch favorite entries
 	favorites, err := ctrl.Queries.ListFavoritesByUser(c, userID)
 	if err != nil {
+		logging.Error("Failed to fetch favorites: ", err)
 		utils.RespondInternalError(c, "Failed to fetch favorites")
 		return
 	}
 
-	utils.RespondOK(c, "Favorites fetched", favorites)
+	if len(favorites) == 0 {
+		utils.RespondOK(c, "No favorites found", models.FavoriteScholarshipListResponse{Favorites: []models.ScholarshipResponse{}})
+		return
+	}
+
+	// Prepare IDs for batch query
+	scholarshipIDs := make([]int32, len(favorites)) 
+	for i, fav := range favorites {
+		scholarshipIDs[i] = int32(fav.ScholarshipID)
+	}
+
+	// Batch fetch scholarships
+	dbScholarships, err := ctrl.Queries.GetScholarshipsByIDs(c, scholarshipIDs)
+	if err != nil {
+		logging.Error("Failed to fetch scholarships: ", err)
+		utils.RespondInternalError(c, "Failed to fetch scholarships")
+		return
+	}
+
+	// Map to response
+	scholarships := make([]models.ScholarshipResponse, len(dbScholarships))
+	for i, s := range dbScholarships {
+		scholarships[i] = models.ScholarshipResponse{
+			ID:              int(s.ID),
+			Title:           s.Title,
+			Provider:        s.Provider,
+			Description:     nullStringToString(s.Description),
+			InstitutionInfo: nullRawMessageToJSON(s.InstitutionInfo),
+			Requirements:    nullRawMessageToJSON(s.Requirements),
+			ExtraNotes:      nullStringToString(s.ExtraNotes),
+			DeadlineEnd:     nullTimeToPtr(s.DeadlineEnd),
+			OfficialLink:    nullStringToPtr(s.OfficialLink),
+			PhotoURL:        nullStringToPtr(s.PhotoUrl),
+			CreatedAt:       *nullTimeToPtr(s.CreatedAt),
+		}
+	}
+
+	utils.RespondOK(c, "Favorites fetched", models.FavoriteScholarshipListResponse{
+		Favorites: scholarships,
+	})
 }

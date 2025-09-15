@@ -51,6 +51,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAllScholarshipsStmt, err = db.PrepareContext(ctx, getAllScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllScholarships: %w", err)
 	}
+	if q.getScholarshipByIDStmt, err = db.PrepareContext(ctx, getScholarshipByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetScholarshipByID: %w", err)
+	}
+	if q.getScholarshipsByIDsStmt, err = db.PrepareContext(ctx, getScholarshipsByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetScholarshipsByIDs: %w", err)
+	}
 	if q.getUserByIDOrEmailStmt, err = db.PrepareContext(ctx, getUserByIDOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByIDOrEmail: %w", err)
 	}
@@ -120,6 +126,16 @@ func (q *Queries) Close() error {
 	if q.getAllScholarshipsStmt != nil {
 		if cerr := q.getAllScholarshipsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllScholarshipsStmt: %w", cerr)
+		}
+	}
+	if q.getScholarshipByIDStmt != nil {
+		if cerr := q.getScholarshipByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getScholarshipByIDStmt: %w", cerr)
+		}
+	}
+	if q.getScholarshipsByIDsStmt != nil {
+		if cerr := q.getScholarshipsByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getScholarshipsByIDsStmt: %w", cerr)
 		}
 	}
 	if q.getUserByIDOrEmailStmt != nil {
@@ -205,6 +221,8 @@ type Queries struct {
 	enableAdmin2FAStmt               *sql.Stmt
 	getAdminByIDOrEmailStmt          *sql.Stmt
 	getAllScholarshipsStmt           *sql.Stmt
+	getScholarshipByIDStmt           *sql.Stmt
+	getScholarshipsByIDsStmt         *sql.Stmt
 	getUserByIDOrEmailStmt           *sql.Stmt
 	getUserWithProfileStmt           *sql.Stmt
 	listFavoritesByUserStmt          *sql.Stmt
@@ -227,6 +245,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		enableAdmin2FAStmt:               q.enableAdmin2FAStmt,
 		getAdminByIDOrEmailStmt:          q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:           q.getAllScholarshipsStmt,
+		getScholarshipByIDStmt:           q.getScholarshipByIDStmt,
+		getScholarshipsByIDsStmt:         q.getScholarshipsByIDsStmt,
 		getUserByIDOrEmailStmt:           q.getUserByIDOrEmailStmt,
 		getUserWithProfileStmt:           q.getUserWithProfileStmt,
 		listFavoritesByUserStmt:          q.listFavoritesByUserStmt,

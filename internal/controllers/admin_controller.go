@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -76,27 +77,33 @@ func validateAdminOTP(admin *db.Admin, otp string) error {
 }
 
 func (ctrl *AdminController) AdminLogin(c *gin.Context) {
-	
-	var otpInput models.AdminOTPInput
-	if !utils.BindJSONOrFail(c, &otpInput) {
+
+	data, err := c.GetRawData()
+	if err != nil || len(data) == 0 {
+		utils.RespondBadRequest(c, "Empty request body", nil)
 		return
 	}
 
-	// Only proceed if OTP is not empty
-	if otpInput.OTP != "" {
+	// Try OTP first
+	var otpInput models.AdminOTPInput
+	if err := json.Unmarshal(data, &otpInput); err == nil && otpInput.OTP != "" {
 		ctrl.handleStep2(c, otpInput)
 		return
 	}
 
+	// Otherwise try login
 	var loginInput models.AdminLoginInput
-	if err := c.ShouldBindJSON(&loginInput); err != nil {
+	if err := json.Unmarshal(data, &loginInput); err != nil {
+		logging.Error("Failed to parse login input: ", err)
 		utils.RespondBadRequest(c, "Invalid input", err.Error())
 		return
 	}
+
 	ctrl.handleStep1(c, loginInput)
 }
 
 func (ctrl *AdminController) handleStep1(c *gin.Context, loginInput models.AdminLoginInput) {
+
 	tx, err := ctrl.DB.BeginTx(c, &sql.TxOptions{})
 	if err != nil {
 		utils.RespondInternalError(c, "Failed to start transaction")
@@ -123,8 +130,7 @@ func (ctrl *AdminController) handleStep1(c *gin.Context, loginInput models.Admin
 
 	tempToken, _ := tokens.GenerateTempToken(admin.Email)
 	utils.RespondOK(c, "OTP required", gin.H{
-		"otp_required": true,
-		"temp_token":   tempToken,
+		"temp_token": tempToken,
 	})
 }
 
