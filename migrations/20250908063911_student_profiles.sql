@@ -4,6 +4,9 @@ CREATE TYPE diploma_grade AS ENUM ('A', 'B', 'C', 'D', 'F');
 
 CREATE TABLE student_profiles (
     student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    high_school VARCHAR(100),
+    grade_level INTEGER CHECK (grade_level BETWEEN 1 AND 12),
+    diploma_year INTEGER,
     diploma_grade diploma_grade,
     select_majors JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

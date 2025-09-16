@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,4 +40,16 @@ func JSONIndent(c *gin.Context, status int, message string, data interface{}) {
 	}
 
 	c.IndentedJSON(status, resp)
+}
+
+// GetIDParam extracts the "id" parameter from the URL and returns it as an int, or an error if invalid.
+func GetIDParam(c *gin.Context, param string) (int, error) {
+
+	idStr := c.Param(param)
+	id, err := strconv.Atoi(idStr)
+
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }

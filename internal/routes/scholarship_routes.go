@@ -16,11 +16,12 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 	// Admin only
 	admin := api.Group("/scholarships")
 	admin.Use(middlewares.RequireAdminAuth())
-	{
+	{	
 		admin.POST("", scholarshipController.CreateScholarship)
+		admin.DELETE("/:id", scholarshipController.DeleteScholarship)
+
 		// admin.GET("/:id", scholarshipController.GetScholarshipByID)
 		// admin.PUT("/:id", scholarshipController.UpdateScholarship)
-		// admin.DELETE("/:id", scholarshipController.DeleteScholarship)
 	}
 
 	// User authenticated

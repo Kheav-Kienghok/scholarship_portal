@@ -63,10 +63,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	params := db.CreateUserParams{
 		Fullname:     sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
-		DiplomaYear:  sql.NullInt32{Int32: int32(input.DiplomaYear), Valid: input.DiplomaYear != 0},
-		Email:        input.Email,
-		GradeLevel:   sql.NullInt32{Int32: int32(input.GradeLevel), Valid: input.GradeLevel != 0},
-		HighSchool:   sql.NullString{String: input.HighSchool, Valid: input.HighSchool != ""},
 		PasswordHash: sql.NullString{String: string(hashedPassword), Valid: true},
 		PhoneNumber:  sql.NullString{String: input.PhoneNumber, Valid: input.PhoneNumber != ""},
 	}

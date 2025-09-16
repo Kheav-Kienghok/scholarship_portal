@@ -116,3 +116,13 @@ func (q *Queries) CreateScholarshipWithDetails(ctx context.Context, arg CreateSc
 	)
 	return i, err
 }
+
+const deleteScholarshipByID = `-- name: DeleteScholarshipByID :exec
+DELETE FROM scholarships
+WHERE id = $1
+`
+
+func (q *Queries) DeleteScholarshipByID(ctx context.Context, id int32) error {
+	_, err := q.exec(ctx, q.deleteScholarshipByIDStmt, deleteScholarshipByID, id)
+	return err
+}

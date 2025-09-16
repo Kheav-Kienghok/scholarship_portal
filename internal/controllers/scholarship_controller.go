@@ -186,25 +186,27 @@ func (ctrl *ScholarshipController) SearchScholarships(c *gin.Context) {
 	utils.JSONIndent(c, http.StatusOK, "Search results", response)
 }
 
-// // DeleteScholarship godoc
-// // @Summary Delete a scholarship by ID
-// // @Tags Scholarships
-// // @Produce json
-// // @Param id path int true "Scholarship ID"
-// // @Success 200 {object} utils.Response{data=string} "Scholarship deleted successfully"
-// // @Router /scholarships/{id} [delete]
-// func (ctrl *ScholarshipController) DeleteScholarship(c *gin.Context) {
-// 	id, err := utils.GetIDParam(c, "id")
-// 	if err != nil {
-// 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid scholarship ID", err.Error())
-// 		return
-// 	}
+// DeleteScholarship godoc
+// @Summary Delete a scholarship by ID
+// @Tags Scholarships
+// @Produce json
+// @Param id path int true "Scholarship ID"
+// @Success 200 {object} utils.Response{data=string} "Scholarship deleted successfully"
+// @Router /scholarships/{id} [delete]
+func (ctrl *ScholarshipController) DeleteScholarship(c *gin.Context) {
 
-// 	err = ctrl.Queries.DeleteScholarship(c, int32(id))
-// 	if err != nil {
-// 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not delete scholarship", err.Error())
-// 		return
-// 	}
+	id, err := utils.GetIDParam(c, "id")
+	if err != nil || id <= 0 {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid scholarship ID", nil)
+		return
+	}
 
-// 	utils.JSONIndent(c, http.StatusOK, "Scholarship deleted successfully", nil)
-// }
+	err = ctrl.Queries.DeleteScholarshipByID(c, int32(id))
+	if err != nil {
+		logging.Error("Failed to delete scholarship: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Could not delete scholarship", err.Error())
+		return
+	}
+
+	utils.JSONIndent(c, http.StatusOK, "Scholarship deleted successfully", nil)
+}

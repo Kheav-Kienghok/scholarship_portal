@@ -12,9 +12,6 @@ CREATE TABLE users (
         CHECK (
             phone_number ~ '^\+855-[1-9][0-9]-[0-9]{3}-[0-9]{3}[0-9]?$'
         ),
-    high_school VARCHAR(100),
-    grade_level INTEGER CHECK (grade_level BETWEEN 1 AND 12),
-    diploma_year INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -42,6 +42,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.deleteScholarshipByIDStmt, err = db.PrepareContext(ctx, deleteScholarshipByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteScholarshipByID: %w", err)
+	}
 	if q.enableAdmin2FAStmt, err = db.PrepareContext(ctx, enableAdmin2FA); err != nil {
 		return nil, fmt.Errorf("error preparing query EnableAdmin2FA: %w", err)
 	}
@@ -117,6 +120,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.deleteScholarshipByIDStmt != nil {
+		if cerr := q.deleteScholarshipByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteScholarshipByIDStmt: %w", cerr)
 		}
 	}
 	if q.enableAdmin2FAStmt != nil {
@@ -234,6 +242,7 @@ type Queries struct {
 	createScholarshipWithDetailsStmt         *sql.Stmt
 	createStudentProfileStmt                 *sql.Stmt
 	createUserStmt                           *sql.Stmt
+	deleteScholarshipByIDStmt                *sql.Stmt
 	enableAdmin2FAStmt                       *sql.Stmt
 	getAdminByIDOrEmailStmt                  *sql.Stmt
 	getAllScholarshipsStmt                   *sql.Stmt
@@ -260,6 +269,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createScholarshipWithDetailsStmt:         q.createScholarshipWithDetailsStmt,
 		createStudentProfileStmt:                 q.createStudentProfileStmt,
 		createUserStmt:                           q.createUserStmt,
+		deleteScholarshipByIDStmt:                q.deleteScholarshipByIDStmt,
 		enableAdmin2FAStmt:                       q.enableAdmin2FAStmt,
 		getAdminByIDOrEmailStmt:                  q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:                   q.getAllScholarshipsStmt,
