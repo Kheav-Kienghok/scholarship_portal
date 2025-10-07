@@ -1,16 +1,30 @@
 -- name: CreateUser :one
 INSERT INTO users (
     fullname, 
-    email, 
-    password_hash, 
-    phone_number, 
-    high_school, 
-    grade_level, 
-    diploma_year
-) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    email,
+    password_hash,
+    phone_number
+) VALUES ($1, $2, $3, $4)
 RETURNING id, fullname, email, created_at, updated_at;
 
+-- name: GetUserByIDOrEmail :one
+SELECT 
+    id,
+    fullname,
+    email,
+    password_hash,
+    phone_number,
+    created_at,
+    updated_at
+FROM users
+WHERE ($1::int IS NOT NULL AND id = $1) OR ($2::text IS NOT NULL AND email = $2);
 
--- name: CreateStudentProfile :exec
-INSERT INTO student_profiles (student_id)
-VALUES ($1);
+-- name: GetUserByEmail :one
+SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+FROM users 
+WHERE email = $1;
+
+-- name: GetUserByID :one
+SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+FROM users 
+WHERE id = $1;

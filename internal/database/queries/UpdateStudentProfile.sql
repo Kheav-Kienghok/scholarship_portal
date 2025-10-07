@@ -1,7 +1,7 @@
--- name: UpdateStudentProfile :exec
-UPDATE student_profiles
-SET
-    diploma_grade = COALESCE(sqlc.narg(diploma_grade), diploma_grade),
-    select_majors = COALESCE(sqlc.narg(select_majors), select_majors),
-    updated_at = NOW()
-WHERE student_id = sqlc.arg(student_id);
+-- -- name: UpdateStudentProfile :exec
+-- UPDATE student_profiles
+-- SET
+--     diploma_grade = COALESCE(sqlc.narg(diploma_grade), diploma_grade),
+--     select_majors = COALESCE(sqlc.narg(select_majors), select_majors),
+--     updated_at = NOW()
+-- WHERE student_id = sqlc.arg(student_id);

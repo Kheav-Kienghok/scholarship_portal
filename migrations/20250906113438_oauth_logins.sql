@@ -1,6 +1,13 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TYPE oauth_provider AS ENUM ('google', 'facebook');
+-- Create ENUM type only if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'oauth_provider') THEN
+        CREATE TYPE oauth_provider AS ENUM ('google', 'facebook');
+    END IF;
+END$$;
+
 
 CREATE TABLE oauth_logins (
     id SERIAL PRIMARY KEY,
@@ -18,6 +25,6 @@ CREATE TABLE oauth_logins (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS oauth_logins;
-
+DROP TABLE IF EXISTS oauth_logins CASCADE;
+DROP TYPE IF EXISTS oauth_provider CASCADE;
 -- +goose StatementEnd

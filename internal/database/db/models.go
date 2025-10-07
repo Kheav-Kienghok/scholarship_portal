@@ -116,6 +116,15 @@ type FavoriteScholarship struct {
 	CreatedAt     sql.NullTime `json:"created_at"`
 }
 
+type Notification struct {
+	ID          int32        `json:"id"`
+	UserID      int32        `json:"user_id"`
+	Message     string       `json:"message"`
+	IsProcessed sql.NullBool `json:"is_processed"`
+	CreatedAt   sql.NullTime `json:"created_at"`
+	UpdatedAt   sql.NullTime `json:"updated_at"`
+}
+
 type OauthLogin struct {
 	ID             int32          `json:"id"`
 	UserID         sql.NullInt32  `json:"user_id"`
@@ -145,6 +154,9 @@ type Scholarship struct {
 
 type StudentProfile struct {
 	StudentID    int32                 `json:"student_id"`
+	HighSchool   sql.NullString        `json:"high_school"`
+	GradeLevel   sql.NullInt32         `json:"grade_level"`
+	DiplomaYear  sql.NullInt32         `json:"diploma_year"`
 	DiplomaGrade NullDiplomaGrade      `json:"diploma_grade"`
 	SelectMajors pqtype.NullRawMessage `json:"select_majors"`
 	CreatedAt    sql.NullTime          `json:"created_at"`
@@ -157,9 +169,6 @@ type User struct {
 	Email        string         `json:"email"`
 	PasswordHash sql.NullString `json:"password_hash"`
 	PhoneNumber  sql.NullString `json:"phone_number"`
-	HighSchool   sql.NullString `json:"high_school"`
-	GradeLevel   sql.NullInt32  `json:"grade_level"`
-	DiplomaYear  sql.NullInt32  `json:"diploma_year"`
 	CreatedAt    sql.NullTime   `json:"created_at"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 }

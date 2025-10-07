@@ -92,9 +92,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	// Check if user exists
-	user, err := h.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-		Email: userInfo.Email,
-	})
+	user, err := h.Queries.GetUserByEmail(c, userInfo.Email)
 	if err != nil && err != sql.ErrNoRows {
 		logging.Error("DB: Failed to find user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
@@ -108,9 +106,6 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 			Fullname:     sql.NullString{Valid: false},
 			PasswordHash: sql.NullString{Valid: false},
 			PhoneNumber:  sql.NullString{Valid: false},
-			HighSchool:   sql.NullString{Valid: false},
-			GradeLevel:   sql.NullInt32{Valid: false},
-			DiplomaYear:  sql.NullInt32{Valid: false},
 		})
 		if err != nil {
 			logging.Error("DB: Failed to create user:", err)
@@ -119,9 +114,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 		}
 
 		// Fetch the user again to get the correct ID
-		user, err = h.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-			Email: userInfo.Email,
-		})
+		user, err = h.Queries.GetUserByEmail(c, userInfo.Email)
 		if err != nil {
 			logging.Error("DB: Failed to fetch user after creation:", err)
 			utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)

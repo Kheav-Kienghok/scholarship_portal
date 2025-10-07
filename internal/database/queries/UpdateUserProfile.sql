@@ -1,10 +1,10 @@
--- name: UpdateUserProfile :exec
-UPDATE users
-SET
-    fullname = COALESCE(sqlc.narg(fullname), fullname),
-    phone_number = COALESCE(sqlc.narg(phone_number), phone_number),
-    high_school = COALESCE(sqlc.narg(high_school), high_school),
-    grade_level = COALESCE(sqlc.narg(grade_level), grade_level),
-    diploma_year = COALESCE(sqlc.narg(diploma_year), diploma_year),
-    updated_at = NOW()
-WHERE id = sqlc.arg(id);
+-- -- name: UpdateUserProfile :exec
+-- UPDATE users
+-- SET
+--     fullname = COALESCE(sqlc.narg(fullname), fullname),
+--     phone_number = COALESCE(sqlc.narg(phone_number), phone_number),
+--     high_school = COALESCE(sqlc.narg(high_school), high_school),
+--     grade_level = COALESCE(sqlc.narg(grade_level), grade_level),
+--     diploma_year = COALESCE(sqlc.narg(diploma_year), diploma_year),
+--     updated_at = NOW()
+-- WHERE id = sqlc.arg(id);
