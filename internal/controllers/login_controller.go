@@ -37,9 +37,7 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := ctrl.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-		Email: input.Email,
-	})
+	user, err := ctrl.Queries.GetUserByEmail(c, input.Email)
 	if err != nil {
 		utils.JSONIndent(c, http.StatusUnauthorized, "User not found", nil)
 		return

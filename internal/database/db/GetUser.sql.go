@@ -10,6 +10,8 @@ import (
 )
 
 const getAdminByIDOrEmail = `-- name: GetAdminByIDOrEmail :one
+
+
 SELECT 
     id,
     fullname,
@@ -28,6 +30,22 @@ type GetAdminByIDOrEmailParams struct {
 	Email string `json:"email"`
 }
 
+// -- name: GetUserByIDOrEmail :one
+// SELECT
+//
+//	id,
+//	fullname,
+//	email,
+//	password_hash,
+//	phone_number,
+//	high_school,
+//	grade_level,
+//	diploma_year,
+//	created_at,
+//	updated_at
+//
+// FROM users
+// WHERE id = $1 OR email = $2;
 func (q *Queries) GetAdminByIDOrEmail(ctx context.Context, arg GetAdminByIDOrEmailParams) (Admin, error) {
 	row := q.queryRow(ctx, q.getAdminByIDOrEmailStmt, getAdminByIDOrEmail, arg.ID, arg.Email)
 	var i Admin
@@ -38,45 +56,6 @@ func (q *Queries) GetAdminByIDOrEmail(ctx context.Context, arg GetAdminByIDOrEma
 		&i.PasswordHash,
 		&i.TotpSecret,
 		&i.IsTwoFactor,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserByIDOrEmail = `-- name: GetUserByIDOrEmail :one
-SELECT 
-    id,
-    fullname,
-    email,
-    password_hash,
-    phone_number,
-    high_school,
-    grade_level,
-    diploma_year,
-    created_at,
-    updated_at
-FROM users
-WHERE id = $1 OR email = $2
-`
-
-type GetUserByIDOrEmailParams struct {
-	ID    int32  `json:"id"`
-	Email string `json:"email"`
-}
-
-func (q *Queries) GetUserByIDOrEmail(ctx context.Context, arg GetUserByIDOrEmailParams) (User, error) {
-	row := q.queryRow(ctx, q.getUserByIDOrEmailStmt, getUserByIDOrEmail, arg.ID, arg.Email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Fullname,
-		&i.Email,
-		&i.PasswordHash,
-		&i.PhoneNumber,
-		&i.HighSchool,
-		&i.GradeLevel,
-		&i.DiplomaYear,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

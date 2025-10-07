@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
@@ -40,17 +41,43 @@ func (r *RegisterController) Register(c *gin.Context) {
 		return
 	}
 
+	validateEmail := utils.ValidateEmail(input.Email)
+	if !validateEmail {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
+		return
+	}
+
+	if phone := strings.TrimSpace(input.PhoneNumber); phone != "" {
+
+		// Case 1: Already valid → skip normalization
+		if utils.ValidatePhoneNumber(phone) {
+			input.PhoneNumber = phone
+		} else {
+			// Case 2: Try to normalize
+			normalized := utils.NormalizeCambodianPhone(phone)
+			if normalized == "" || !utils.ValidatePhoneNumber(normalized) {
+				utils.JSONIndent(c, http.StatusBadRequest, "Invalid phone number format 1", nil)
+				return
+			}
+			input.PhoneNumber = normalized
+		}
+	}
+
+	validatePassword := utils.ValidatePassword(input.Password)
+	if !validatePassword {
+		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 6 characters", nil)
+		return
+	}
+
 	// Check if user already exists
-	_, err := r.Queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-		Email: input.Email,
-	})
+	_, err := r.Queries.GetUserByEmail(c, input.Email)
 	if err != nil && err != sql.ErrNoRows {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
 	if err == nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "User already exists", nil)
+		utils.JSONIndent(c, http.StatusBadRequest, "Email is already registered", nil)
 		return
 	}
 
@@ -63,21 +90,20 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	params := db.CreateUserParams{
 		Fullname:     sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
+		Email:        strings.ToLower(input.Email),
 		PasswordHash: sql.NullString{String: string(hashedPassword), Valid: true},
 		PhoneNumber:  sql.NullString{String: input.PhoneNumber, Valid: input.PhoneNumber != ""},
 	}
 
-	user, err := r.Queries.CreateUser(c, params)
+	_, err = r.Queries.CreateUser(c, params)
 	if err != nil {
-		logging.Error("DB: Failed to create user:", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
-		return
-	}
 
-	// Create empty student profile for this user
-	err = r.Queries.CreateStudentProfile(c, user.ID)
-	if err != nil {
-		logging.Error("DB: Failed to create student profile:", err)
+		if strings.Contains(err.Error(), "users_phone_number_key") {
+			utils.JSONIndent(c, http.StatusBadRequest, "Phone number is already taken", nil)
+			return
+		}
+
+		logging.Error("DB: Failed to create user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}

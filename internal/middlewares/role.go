@@ -35,8 +35,7 @@ func RequireRole(queries *db.Queries, role string) gin.HandlerFunc {
 
 		switch strings.ToLower(role) {
 		case "admin":
-			admin, err := queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-				ID:    int32(userClaims.ID),
+			admin, err := queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{
 				Email: email,
 			})
 			if err != nil || admin.Email == "" {
@@ -45,10 +44,7 @@ func RequireRole(queries *db.Queries, role string) gin.HandlerFunc {
 				return
 			}
 		case "user":
-			user, err := queries.GetUserByIDOrEmail(c, db.GetUserByIDOrEmailParams{
-				ID:    int32(userClaims.ID),
-				Email: email,
-			})
+			user, err := queries.GetUserByEmail(c, email)
 			if err != nil || user.Email == "" {
 				utils.JSONIndent(c, http.StatusForbidden, "Users only", nil)
 				c.Abort()

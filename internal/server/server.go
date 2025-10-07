@@ -9,6 +9,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/routes"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,11 +25,15 @@ func NewServer(port string, db *database.Database) *Server {
 
 	router := gin.Default()
 	_ = router.SetTrustedProxies(nil)
-	router.Use(logging.GinLogger())
-	router.Use(middlewares.RequestLogger()) // Add your custom middleware her
 
-	// Setup routes
-	routes.SetupRoutes(router, db)
+	// Add CORS middleware to accept all origins
+	router.Use(cors.Default())
+
+	router.Use(logging.GinLogger())
+	router.Use(middlewares.RequestLogger()) // Add your custom middleware here
+
+    // Setup routes (CORS is configured in routes.go)
+    routes.SetupRoutes(router, db)
 
 	// Handle unknown paths with JSON 404
 	router.NoRoute(func(c *gin.Context) {

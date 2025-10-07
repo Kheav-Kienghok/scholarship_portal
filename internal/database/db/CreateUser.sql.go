@@ -10,26 +10,13 @@ import (
 	"database/sql"
 )
 
-const createStudentProfile = `-- name: CreateStudentProfile :exec
-INSERT INTO student_profiles (student_id)
-VALUES ($1)
-`
-
-func (q *Queries) CreateStudentProfile(ctx context.Context, studentID int32) error {
-	_, err := q.exec(ctx, q.createStudentProfileStmt, createStudentProfile, studentID)
-	return err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     fullname, 
-    email, 
-    password_hash, 
-    phone_number, 
-    high_school, 
-    grade_level, 
-    diploma_year
-) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    email,
+    password_hash,
+    phone_number
+) VALUES ($1, $2, $3, $4)
 RETURNING id, fullname, email, created_at, updated_at
 `
 
@@ -38,9 +25,6 @@ type CreateUserParams struct {
 	Email        string         `json:"email"`
 	PasswordHash sql.NullString `json:"password_hash"`
 	PhoneNumber  sql.NullString `json:"phone_number"`
-	HighSchool   sql.NullString `json:"high_school"`
-	GradeLevel   sql.NullInt32  `json:"grade_level"`
-	DiplomaYear  sql.NullInt32  `json:"diploma_year"`
 }
 
 type CreateUserRow struct {
@@ -57,15 +41,87 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.Email,
 		arg.PasswordHash,
 		arg.PhoneNumber,
-		arg.HighSchool,
-		arg.GradeLevel,
-		arg.DiplomaYear,
 	)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+FROM users 
+WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.queryRow(ctx, q.getUserByEmailStmt, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Fullname,
+		&i.Email,
+		&i.PasswordHash,
+		&i.PhoneNumber,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+FROM users 
+WHERE id = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
+	row := q.queryRow(ctx, q.getUserByIDStmt, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Fullname,
+		&i.Email,
+		&i.PasswordHash,
+		&i.PhoneNumber,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByIDOrEmail = `-- name: GetUserByIDOrEmail :one
+SELECT 
+    id,
+    fullname,
+    email,
+    password_hash,
+    phone_number,
+    created_at,
+    updated_at
+FROM users
+WHERE ($1::int IS NOT NULL AND id = $1) OR ($2::text IS NOT NULL AND email = $2)
+`
+
+type GetUserByIDOrEmailParams struct {
+	Column1 int32  `json:"column_1"`
+	Column2 string `json:"column_2"`
+}
+
+func (q *Queries) GetUserByIDOrEmail(ctx context.Context, arg GetUserByIDOrEmailParams) (User, error) {
+	row := q.queryRow(ctx, q.getUserByIDOrEmailStmt, getUserByIDOrEmail, arg.Column1, arg.Column2)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Fullname,
+		&i.Email,
+		&i.PasswordHash,
+		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

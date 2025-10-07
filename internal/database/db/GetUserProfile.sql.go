@@ -18,10 +18,10 @@ SELECT
     u.fullname,
     u.email,
     u.phone_number,
-    u.high_school,
-    u.grade_level,
-    u.diploma_year,
-    s.diploma_grade,
+    -- u.high_school,
+    -- u.grade_level,
+    -- u.diploma_year,
+    -- s.diploma_grade,
     s.select_majors,
     s.created_at AS profile_created_at,
     s.updated_at AS profile_updated_at
@@ -40,10 +40,6 @@ type GetUserWithProfileRow struct {
 	Fullname         sql.NullString        `json:"fullname"`
 	Email            string                `json:"email"`
 	PhoneNumber      sql.NullString        `json:"phone_number"`
-	HighSchool       sql.NullString        `json:"high_school"`
-	GradeLevel       sql.NullInt32         `json:"grade_level"`
-	DiplomaYear      sql.NullInt32         `json:"diploma_year"`
-	DiplomaGrade     NullDiplomaGrade      `json:"diploma_grade"`
 	SelectMajors     pqtype.NullRawMessage `json:"select_majors"`
 	ProfileCreatedAt sql.NullTime          `json:"profile_created_at"`
 	ProfileUpdatedAt sql.NullTime          `json:"profile_updated_at"`
@@ -57,10 +53,6 @@ func (q *Queries) GetUserWithProfile(ctx context.Context, arg GetUserWithProfile
 		&i.Fullname,
 		&i.Email,
 		&i.PhoneNumber,
-		&i.HighSchool,
-		&i.GradeLevel,
-		&i.DiplomaYear,
-		&i.DiplomaGrade,
 		&i.SelectMajors,
 		&i.ProfileCreatedAt,
 		&i.ProfileUpdatedAt,
