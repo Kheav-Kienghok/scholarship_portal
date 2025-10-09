@@ -36,11 +36,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createScholarshipWithDetailsStmt, err = db.PrepareContext(ctx, createScholarshipWithDetails); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateScholarshipWithDetails: %w", err)
 	}
+	if q.createStudentProfileStmt, err = db.PrepareContext(ctx, createStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateStudentProfile: %w", err)
+	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
 	if q.deleteScholarshipByIDStmt, err = db.PrepareContext(ctx, deleteScholarshipByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteScholarshipByID: %w", err)
+	}
+	if q.deleteStudentProfileStmt, err = db.PrepareContext(ctx, deleteStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteStudentProfile: %w", err)
 	}
 	if q.enableAdmin2FAStmt, err = db.PrepareContext(ctx, enableAdmin2FA); err != nil {
 		return nil, fmt.Errorf("error preparing query EnableAdmin2FA: %w", err)
@@ -66,6 +72,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getScholarshipsByInstitutionCodeLikeStmt, err = db.PrepareContext(ctx, getScholarshipsByInstitutionCodeLike); err != nil {
 		return nil, fmt.Errorf("error preparing query GetScholarshipsByInstitutionCodeLike: %w", err)
 	}
+	if q.getStudentProfileStmt, err = db.PrepareContext(ctx, getStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStudentProfile: %w", err)
+	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
 	}
@@ -78,6 +87,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserWithProfileStmt, err = db.PrepareContext(ctx, getUserWithProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserWithProfile: %w", err)
 	}
+	if q.getUserWithStudentProfileStmt, err = db.PrepareContext(ctx, getUserWithStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserWithStudentProfile: %w", err)
+	}
 	if q.listFavoritesByUserStmt, err = db.PrepareContext(ctx, listFavoritesByUser); err != nil {
 		return nil, fmt.Errorf("error preparing query ListFavoritesByUser: %w", err)
 	}
@@ -86,6 +98,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.searchScholarshipsStmt, err = db.PrepareContext(ctx, searchScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query SearchScholarships: %w", err)
+	}
+	if q.updateStudentProfileStmt, err = db.PrepareContext(ctx, updateStudentProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateStudentProfile: %w", err)
 	}
 	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
@@ -118,6 +133,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createScholarshipWithDetailsStmt: %w", cerr)
 		}
 	}
+	if q.createStudentProfileStmt != nil {
+		if cerr := q.createStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createStudentProfileStmt: %w", cerr)
+		}
+	}
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
@@ -126,6 +146,11 @@ func (q *Queries) Close() error {
 	if q.deleteScholarshipByIDStmt != nil {
 		if cerr := q.deleteScholarshipByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteScholarshipByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteStudentProfileStmt != nil {
+		if cerr := q.deleteStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteStudentProfileStmt: %w", cerr)
 		}
 	}
 	if q.enableAdmin2FAStmt != nil {
@@ -168,6 +193,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getScholarshipsByInstitutionCodeLikeStmt: %w", cerr)
 		}
 	}
+	if q.getStudentProfileStmt != nil {
+		if cerr := q.getStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStudentProfileStmt: %w", cerr)
+		}
+	}
 	if q.getUserByEmailStmt != nil {
 		if cerr := q.getUserByEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByEmailStmt: %w", cerr)
@@ -188,6 +218,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserWithProfileStmt: %w", cerr)
 		}
 	}
+	if q.getUserWithStudentProfileStmt != nil {
+		if cerr := q.getUserWithStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserWithStudentProfileStmt: %w", cerr)
+		}
+	}
 	if q.listFavoritesByUserStmt != nil {
 		if cerr := q.listFavoritesByUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listFavoritesByUserStmt: %w", cerr)
@@ -201,6 +236,11 @@ func (q *Queries) Close() error {
 	if q.searchScholarshipsStmt != nil {
 		if cerr := q.searchScholarshipsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing searchScholarshipsStmt: %w", cerr)
+		}
+	}
+	if q.updateStudentProfileStmt != nil {
+		if cerr := q.updateStudentProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateStudentProfileStmt: %w", cerr)
 		}
 	}
 	if q.updateUserProfileStmt != nil {
@@ -256,8 +296,10 @@ type Queries struct {
 	adminUpdateUserTOTPSecretStmt            *sql.Stmt
 	createScholarshipStmt                    *sql.Stmt
 	createScholarshipWithDetailsStmt         *sql.Stmt
+	createStudentProfileStmt                 *sql.Stmt
 	createUserStmt                           *sql.Stmt
 	deleteScholarshipByIDStmt                *sql.Stmt
+	deleteStudentProfileStmt                 *sql.Stmt
 	enableAdmin2FAStmt                       *sql.Stmt
 	getAdminByEmailStmt                      *sql.Stmt
 	getAdminByIDStmt                         *sql.Stmt
@@ -266,13 +308,16 @@ type Queries struct {
 	getScholarshipByIDStmt                   *sql.Stmt
 	getScholarshipsByIDsStmt                 *sql.Stmt
 	getScholarshipsByInstitutionCodeLikeStmt *sql.Stmt
+	getStudentProfileStmt                    *sql.Stmt
 	getUserByEmailStmt                       *sql.Stmt
 	getUserByIDStmt                          *sql.Stmt
 	getUserByIDOrEmailStmt                   *sql.Stmt
 	getUserWithProfileStmt                   *sql.Stmt
+	getUserWithStudentProfileStmt            *sql.Stmt
 	listFavoritesByUserStmt                  *sql.Stmt
 	removeFavoriteStmt                       *sql.Stmt
 	searchScholarshipsStmt                   *sql.Stmt
+	updateStudentProfileStmt                 *sql.Stmt
 	updateUserProfileStmt                    *sql.Stmt
 	upsertOauthLoginStmt                     *sql.Stmt
 }
@@ -285,8 +330,10 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		adminUpdateUserTOTPSecretStmt:            q.adminUpdateUserTOTPSecretStmt,
 		createScholarshipStmt:                    q.createScholarshipStmt,
 		createScholarshipWithDetailsStmt:         q.createScholarshipWithDetailsStmt,
+		createStudentProfileStmt:                 q.createStudentProfileStmt,
 		createUserStmt:                           q.createUserStmt,
 		deleteScholarshipByIDStmt:                q.deleteScholarshipByIDStmt,
+		deleteStudentProfileStmt:                 q.deleteStudentProfileStmt,
 		enableAdmin2FAStmt:                       q.enableAdmin2FAStmt,
 		getAdminByEmailStmt:                      q.getAdminByEmailStmt,
 		getAdminByIDStmt:                         q.getAdminByIDStmt,
@@ -295,13 +342,16 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getScholarshipByIDStmt:                   q.getScholarshipByIDStmt,
 		getScholarshipsByIDsStmt:                 q.getScholarshipsByIDsStmt,
 		getScholarshipsByInstitutionCodeLikeStmt: q.getScholarshipsByInstitutionCodeLikeStmt,
+		getStudentProfileStmt:                    q.getStudentProfileStmt,
 		getUserByEmailStmt:                       q.getUserByEmailStmt,
 		getUserByIDStmt:                          q.getUserByIDStmt,
 		getUserByIDOrEmailStmt:                   q.getUserByIDOrEmailStmt,
 		getUserWithProfileStmt:                   q.getUserWithProfileStmt,
+		getUserWithStudentProfileStmt:            q.getUserWithStudentProfileStmt,
 		listFavoritesByUserStmt:                  q.listFavoritesByUserStmt,
 		removeFavoriteStmt:                       q.removeFavoriteStmt,
 		searchScholarshipsStmt:                   q.searchScholarshipsStmt,
+		updateStudentProfileStmt:                 q.updateStudentProfileStmt,
 		updateUserProfileStmt:                    q.updateUserProfileStmt,
 		upsertOauthLoginStmt:                     q.upsertOauthLoginStmt,
 	}

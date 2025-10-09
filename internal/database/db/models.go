@@ -6,56 +6,9 @@ package db
 
 import (
 	"database/sql"
-	"database/sql/driver"
-	"fmt"
 
 	"github.com/sqlc-dev/pqtype"
 )
-
-type DiplomaGrade string
-
-const (
-	DiplomaGradeA DiplomaGrade = "A"
-	DiplomaGradeB DiplomaGrade = "B"
-	DiplomaGradeC DiplomaGrade = "C"
-	DiplomaGradeD DiplomaGrade = "D"
-	DiplomaGradeF DiplomaGrade = "F"
-)
-
-func (e *DiplomaGrade) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = DiplomaGrade(s)
-	case string:
-		*e = DiplomaGrade(s)
-	default:
-		return fmt.Errorf("unsupported scan type for DiplomaGrade: %T", src)
-	}
-	return nil
-}
-
-type NullDiplomaGrade struct {
-	DiplomaGrade DiplomaGrade `json:"diploma_grade"`
-	Valid        bool         `json:"valid"` // Valid is true if DiplomaGrade is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullDiplomaGrade) Scan(value interface{}) error {
-	if value == nil {
-		ns.DiplomaGrade, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.DiplomaGrade.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullDiplomaGrade) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.DiplomaGrade), nil
-}
 
 type Admin struct {
 	ID           int32          `json:"id"`
@@ -102,11 +55,12 @@ type Scholarship struct {
 }
 
 type StudentProfile struct {
+	ID           int32                 `json:"id"`
 	StudentID    int32                 `json:"student_id"`
 	HighSchool   sql.NullString        `json:"high_school"`
-	GradeLevel   sql.NullInt32         `json:"grade_level"`
+	GradeLevel   sql.NullString        `json:"grade_level"`
 	DiplomaYear  sql.NullInt32         `json:"diploma_year"`
-	DiplomaGrade NullDiplomaGrade      `json:"diploma_grade"`
+	DiplomaGrade sql.NullString        `json:"diploma_grade"`
 	SelectMajors pqtype.NullRawMessage `json:"select_majors"`
 	CreatedAt    sql.NullTime          `json:"created_at"`
 	UpdatedAt    sql.NullTime          `json:"updated_at"`

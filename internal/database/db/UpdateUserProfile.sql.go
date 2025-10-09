@@ -11,33 +11,28 @@ import (
 )
 
 const updateUserProfile = `-- name: UpdateUserProfile :one
-UPDATE users 
-SET fullname = $2, phone_number = $3, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, fullname, email, created_at, updated_at
+UPDATE users
+SET fullname = COALESCE($1, fullname),
+    phone_number = COALESCE($2, phone_number)
+WHERE id = $3
+RETURNING id, fullname, email, password_hash, phone_number, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
-	ID          int32          `json:"id"`
 	Fullname    sql.NullString `json:"fullname"`
 	PhoneNumber sql.NullString `json:"phone_number"`
+	ID          int32          `json:"id"`
 }
 
-type UpdateUserProfileRow struct {
-	ID        int32          `json:"id"`
-	Fullname  sql.NullString `json:"fullname"`
-	Email     string         `json:"email"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
-}
-
-func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
-	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile, arg.ID, arg.Fullname, arg.PhoneNumber)
-	var i UpdateUserProfileRow
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile, arg.Fullname, arg.PhoneNumber, arg.ID)
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
+		&i.PasswordHash,
+		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

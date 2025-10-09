@@ -26,7 +26,8 @@ func RegisterUserRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 	userGroup := api.Group("/user")
 	userGroup.Use(middlewares.RequireUserAuth())
 	{
-		userGroup.GET("/profile", userController.GetUserProfile)
+		userGroup.GET("/profile", userController.GetProfile)
+		userGroup.PUT("/profile", userController.UpdateProfile)
 		// userGroup.PATCH("/update-profile", userController.UpdateUserAndProfile)
 	}
 }

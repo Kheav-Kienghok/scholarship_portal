@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type UserController struct {
@@ -25,19 +27,19 @@ func UserControllerHandler(dbConn *sql.DB, queries *db.Queries) *UserController 
 	}
 }
 
-// func sliceToNullRawMessage(slice []string) pqtype.NullRawMessage {
-// 	if len(slice) == 0 {
-// 		return pqtype.NullRawMessage{Valid: false}
-// 	}
-// 	b, _ := json.Marshal(slice)
-// 	return pqtype.NullRawMessage{
-// 		RawMessage: b,
-// 		Valid:      true,
-// 	}
-// }
+// Helper functions
+func sliceToNullRawMessage(slice []string) pqtype.NullRawMessage {
+	if slice == nil {
+		return pqtype.NullRawMessage{Valid: false}
+	}
+	b, _ := json.Marshal(slice)
+	return pqtype.NullRawMessage{
+		RawMessage: b,
+		Valid:      true,
+	}
+}
 
 func getUserClaims(c *gin.Context) (*tokens.UserClaims, bool) {
-
 	claims, ok := c.Get("claims")
 	if !ok {
 		return nil, false
@@ -52,104 +54,276 @@ func getUserClaims(c *gin.Context) (*tokens.UserClaims, bool) {
 }
 
 // GetProfile godoc
-// @Summary Get user profile information
+// @Summary Get unified user profile with student information
 // @Tags Users
 // @Produce json
-// @Success 200 {object} models.UserProfileResponse "Fetch User successfully"
+// @Success 200 {object} models.UnifiedUserProfileResponse "User profile fetched successfully"
 // @Security BearerAuth
 // @Router /profile [get]
-func (u *UserController) GetUserProfile(c *gin.Context) {
-
+func (u *UserController) GetProfile(c *gin.Context) {
 	userClaims, ok := getUserClaims(c)
 	if !ok {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Something went wrong!", nil)
+		utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	ctx := c.Request.Context()
-
-	arg := db.GetUserWithProfileParams{
-		ID:    int32(userClaims.ID),
-		Email: userClaims.Email,
-	}
-
-	userWithProfile, err := u.Queries.GetUserWithProfile(ctx, arg)
-	if err != nil {
-		logging.Error("[User Controller]: Failed to get user profile: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch user profile", nil)
-		return
-	}
-
-	var selectMajors []string
-	if userWithProfile.SelectMajors.Valid {
-		if err := json.Unmarshal(userWithProfile.SelectMajors.RawMessage, &selectMajors); err != nil {
-			logging.Error("Failed to unmarshal select majors: ", err)
-			utils.JSONIndent(c, http.StatusInternalServerError, "Failed to parse select majors", nil)
-			return
-		}
-	}
-
-	response := models.UserProfileResponse{
-		ID:               userWithProfile.ID,
-		Fullname:         userWithProfile.Fullname.String,
-		Email:            userWithProfile.Email,
-		PhoneNumber:      userWithProfile.PhoneNumber.String,
-		ProfileCreatedAt: userWithProfile.ProfileCreatedAt.Time,
-		ProfileUpdatedAt: userWithProfile.ProfileUpdatedAt.Time,
-	}
-
-	utils.JSONIndent(c, http.StatusOK, "User profile fetched successfully", response)
-}
-
-func (u *UserController) UpdateUserProfile(c *gin.Context) {
-	var input models.UpdateUserRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		logging.Error("Failed to bind update profile input: ", err)
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
-		return
-	}
-
-	ctx := c.Request.Context()
-	userClaims, ok := getUserClaims(c)
-	if !ok {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Something went wrong!", nil)
-		return
-	}
-
-	// Fetch existing user
-	existingProfile, err := u.Queries.GetUserByEmail(ctx, userClaims.Email)
+	userWithProfile, err := u.Queries.GetUserWithStudentProfile(ctx, int32(userClaims.ID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.JSONIndent(c, http.StatusNotFound, "User not found", nil)
 			return
 		}
-		logging.Error("Failed to fetch existing user profile: ", err)
+		logging.Error("[User Controller]: Failed to get user profile: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch user profile", nil)
 		return
 	}
 
-	// Build params (default to existing values)
-	params := db.UpdateUserProfileParams{
-		ID:          existingProfile.ID,
-		Fullname:    existingProfile.Fullname,
-		PhoneNumber: existingProfile.PhoneNumber,
-	}
+	response := buildUnifiedUserProfileResponse(userWithProfile)
+	utils.JSONIndent(c, http.StatusOK, "User profile fetched successfully", response)
+}
 
-	// Only update if user actually provided a field
-	if input.Fullname != nil {
-		params.Fullname = sql.NullString{String: *input.Fullname, Valid: true}
-	}
-	if input.PhoneNumber != nil {
-		params.PhoneNumber = sql.NullString{String: *input.PhoneNumber, Valid: true}
-	}
-
-	// Run update
-	updatedUser, err := u.Queries.UpdateUserProfile(ctx, params)
-	if err != nil {
-		logging.Error("Failed to update user: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update user profile", nil)
+// UpdateProfile godoc
+// @Summary Update user profile and student information atomically
+// @Description Updates only the provided fields using atomic transaction. Supports clearing arrays by passing empty arrays.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param body body models.UpdateUserProfileRequest true "Fields to update (partial update supported)"
+// @Success 200 {object} models.UnifiedUserProfileResponse "Profile updated successfully"
+// @Failure 400 {object} utils.Response "Invalid input"
+// @Failure 401 {object} utils.Response "Unauthorized"
+// @Failure 500 {object} utils.Response "Internal server error"
+// @Security BearerAuth
+// @Router /profile [put]
+func (u *UserController) UpdateProfile(c *gin.Context) {
+	var input models.UpdateUserProfileRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		logging.Error("[User Controller]: Failed to bind update profile input: ", err)
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
 
-	utils.JSONIndent(c, http.StatusOK, "User updated successfully", updatedUser)
+	userClaims, ok := getUserClaims(c)
+	if !ok {
+		utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	ctx := c.Request.Context()
+	userID := int32(userClaims.ID)
+
+	// Validate phone number if provided
+	if input.PhoneNumber != nil && *input.PhoneNumber != "" {
+		if !utils.ValidatePhoneNumber(*input.PhoneNumber) {
+			normalized := utils.NormalizeCambodianPhone(*input.PhoneNumber)
+			if normalized == "" || !utils.ValidatePhoneNumber(normalized) {
+				utils.JSONIndent(c, http.StatusBadRequest, "Invalid phone number format", nil)
+				return
+			}
+			input.PhoneNumber = &normalized
+		}
+	}
+
+	// Start atomic transaction
+	tx, err := u.DB.BeginTx(ctx, nil)
+	if err != nil {
+		logging.Error("[User Controller]: Failed to begin transaction: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to begin transaction", nil)
+		return
+	}
+	defer tx.Rollback()
+
+	queries := u.Queries.WithTx(tx)
+
+	// Update user basic info and student profile atomically
+	updatedProfile, err := u.updateProfileAtomic(ctx, queries, userID, input)
+	if err != nil {
+		logging.Error("[User Controller]: Failed to update profile: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update profile", nil)
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		logging.Error("[User Controller]: Failed to commit transaction: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to commit changes", nil)
+		return
+	}
+
+	response := buildUnifiedUserProfileResponse(updatedProfile)
+	utils.JSONIndent(c, http.StatusOK, "Profile updated successfully", response)
+}
+
+// updateProfileAtomic performs atomic update of user and student profile within transaction
+func (u *UserController) updateProfileAtomic(ctx context.Context, queries *db.Queries, userID int32, input models.UpdateUserProfileRequest) (db.GetUserWithStudentProfileRow, error) {
+	// Get current profile data
+	currentProfile, err := queries.GetUserWithStudentProfile(ctx, userID)
+	if err != nil {
+		return db.GetUserWithStudentProfileRow{}, err
+	}
+
+	// Update user basic info if provided
+	if u.hasUserFields(input) {
+		params := u.buildUserUpdateParams(userID, currentProfile, input)
+		_, err := queries.UpdateUserProfile(ctx, params)
+		if err != nil {
+			return db.GetUserWithStudentProfileRow{}, err
+		}
+	}
+
+	// Handle student profile
+	if u.hasStudentProfileFields(input) {
+		if u.hasExistingStudentProfile(currentProfile) {
+			// Update existing student profile
+			params := u.buildStudentUpdateParams(userID, currentProfile, input)
+			_, err := queries.UpdateStudentProfile(ctx, params)
+			if err != nil {
+				return db.GetUserWithStudentProfileRow{}, err
+			}
+		} else {
+			// Create new student profile
+			params := u.buildStudentCreateParams(userID, input)
+			_, err := queries.CreateStudentProfile(ctx, params)
+			if err != nil {
+				return db.GetUserWithStudentProfileRow{}, err
+			}
+		}
+	}
+
+	// Return updated profile using RETURNING clause optimization
+	return queries.GetUserWithStudentProfile(ctx, userID)
+}
+
+// Helper methods for building parameters
+func (u *UserController) buildUserUpdateParams(userID int32, current db.GetUserWithStudentProfileRow, input models.UpdateUserProfileRequest) db.UpdateUserProfileParams {
+	params := db.UpdateUserProfileParams{
+		ID:          userID,
+		Fullname:    current.Fullname,
+		PhoneNumber: current.PhoneNumber,
+	}
+
+	if input.Fullname != nil {
+		params.Fullname = sql.NullString{String: *input.Fullname, Valid: *input.Fullname != ""}
+	}
+	if input.PhoneNumber != nil {
+		params.PhoneNumber = sql.NullString{String: *input.PhoneNumber, Valid: *input.PhoneNumber != ""}
+	}
+
+	return params
+}
+
+func (u *UserController) buildStudentUpdateParams(userID int32, current db.GetUserWithStudentProfileRow, input models.UpdateUserProfileRequest) db.UpdateStudentProfileParams {
+	params := db.UpdateStudentProfileParams{
+		StudentID:    userID,
+		HighSchool:   current.HighSchool,
+		GradeLevel:   current.GradeLevel,
+		DiplomaYear:  current.DiplomaYear,
+		DiplomaGrade: current.DiplomaGrade,
+		SelectMajors: current.SelectMajors,
+	}
+
+	if input.HighSchool != nil {
+		params.HighSchool = sql.NullString{String: *input.HighSchool, Valid: *input.HighSchool != ""}
+	}
+	if input.GradeLevel != nil {
+		params.GradeLevel = sql.NullString{String: *input.GradeLevel, Valid: *input.GradeLevel != ""}
+	}
+	if input.DiplomaYear != nil {
+		params.DiplomaYear = sql.NullInt32{Int32: *input.DiplomaYear, Valid: *input.DiplomaYear > 0}
+	}
+	if input.DiplomaGrade != nil {
+		params.DiplomaGrade = sql.NullString{String: *input.DiplomaGrade, Valid: *input.DiplomaGrade != ""}
+	}
+	if input.SelectMajors != nil { // Handle empty arrays correctly
+		params.SelectMajors = sliceToNullRawMessage(input.SelectMajors)
+	}
+
+	return params
+}
+
+func (u *UserController) buildStudentCreateParams(userID int32, input models.UpdateUserProfileRequest) db.CreateStudentProfileParams {
+	params := db.CreateStudentProfileParams{
+		StudentID:    userID,
+		HighSchool:   sql.NullString{Valid: false},
+		GradeLevel:   sql.NullString{Valid: false},
+		DiplomaYear:  sql.NullInt32{Valid: false},
+		DiplomaGrade: sql.NullString{Valid: false},
+		SelectMajors: pqtype.NullRawMessage{Valid: false},
+	}
+
+	if input.HighSchool != nil {
+		params.HighSchool = sql.NullString{String: *input.HighSchool, Valid: *input.HighSchool != ""}
+	}
+	if input.GradeLevel != nil {
+		params.GradeLevel = sql.NullString{String: *input.GradeLevel, Valid: *input.GradeLevel != ""}
+	}
+	if input.DiplomaYear != nil {
+		params.DiplomaYear = sql.NullInt32{Int32: *input.DiplomaYear, Valid: *input.DiplomaYear > 0}
+	}
+	if input.DiplomaGrade != nil {
+		params.DiplomaGrade = sql.NullString{String: *input.DiplomaGrade, Valid: *input.DiplomaGrade != ""}
+	}
+	if input.SelectMajors != nil {
+		params.SelectMajors = sliceToNullRawMessage(input.SelectMajors)
+	}
+
+	return params
+}
+
+// Helper validation methods
+func (u *UserController) hasUserFields(input models.UpdateUserProfileRequest) bool {
+	return input.Fullname != nil || input.PhoneNumber != nil
+}
+
+func (u *UserController) hasStudentProfileFields(input models.UpdateUserProfileRequest) bool {
+	return input.HighSchool != nil ||
+		input.GradeLevel != nil ||
+		input.DiplomaYear != nil ||
+		input.DiplomaGrade != nil ||
+		input.SelectMajors != nil
+}
+
+func (u *UserController) hasExistingStudentProfile(profile db.GetUserWithStudentProfileRow) bool {
+	return profile.HighSchool.Valid ||
+		profile.GradeLevel.Valid ||
+		profile.DiplomaYear.Valid ||
+		profile.DiplomaGrade.Valid ||
+		profile.SelectMajors.Valid
+}
+
+// buildUnifiedUserProfileResponse constructs response with proper null handling
+func buildUnifiedUserProfileResponse(data db.GetUserWithStudentProfileRow) models.UnifiedUserProfileResponse {
+	response := models.UnifiedUserProfileResponse{
+		ID:          data.UserID,
+		Fullname:    data.Fullname.String,
+		Email:       data.Email,
+		PhoneNumber: data.PhoneNumber.String,
+		CreatedAt: data.ProfileCreatedAt.Time,
+		UpdatedAt: data.ProfileUpdatedAt.Time,
+	}
+
+	// Add student profile if any student data exists
+	if data.HighSchool.Valid || data.GradeLevel.Valid || data.DiplomaYear.Valid ||
+		data.DiplomaGrade.Valid || data.SelectMajors.Valid {
+		var selectMajors []string
+		if data.SelectMajors.Valid {
+			if err := json.Unmarshal(data.SelectMajors.RawMessage, &selectMajors); err != nil {
+				logging.Error("[User Controller]: Failed to unmarshal select majors: ", err)
+				selectMajors = []string{} // Default to empty array on error
+			}
+		}
+
+		response.StudentProfile = &models.StudentProfileResponse{	
+			HighSchool:   data.HighSchool.String,
+			GradeLevel:   data.GradeLevel.String,
+			DiplomaYear:  data.DiplomaYear.Int32,
+			DiplomaGrade: data.DiplomaGrade.String,
+			SelectMajors: selectMajors,
+			CreatedAt:    data.ProfileCreatedAt.Time,
+			UpdatedAt:    data.ProfileUpdatedAt.Time,
+		}
+	}
+
+	return response
 }
