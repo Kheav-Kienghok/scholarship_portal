@@ -51,11 +51,13 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 		// Case 1: Already valid → skip normalization
 		if utils.ValidatePhoneNumber(phone) {
+			logging.Info("Phone number is already valid:", phone)
 			input.PhoneNumber = phone
 		} else {
 			// Case 2: Try to normalize
 			normalized := utils.NormalizeCambodianPhone(phone)
 			if normalized == "" || !utils.ValidatePhoneNumber(normalized) {
+				logging.Warn("Invalid phone number format:", phone)
 				utils.JSONIndent(c, http.StatusBadRequest, "Invalid phone number format 1", nil)
 				return
 			}

@@ -35,9 +35,7 @@ func RequireRole(queries *db.Queries, role string) gin.HandlerFunc {
 
 		switch strings.ToLower(role) {
 		case "admin":
-			admin, err := queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{
-				Email: email,
-			})
+			admin, err := queries.GetAdminByEmail(c, email)
 			if err != nil || admin.Email == "" {
 				utils.JSONIndent(c, http.StatusForbidden, "Admins only", nil)
 				c.Abort()

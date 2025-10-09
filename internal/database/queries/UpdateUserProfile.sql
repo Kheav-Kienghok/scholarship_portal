@@ -1,10 +1,5 @@
--- -- name: UpdateUserProfile :exec
--- UPDATE users
--- SET
---     fullname = COALESCE(sqlc.narg(fullname), fullname),
---     phone_number = COALESCE(sqlc.narg(phone_number), phone_number),
---     high_school = COALESCE(sqlc.narg(high_school), high_school),
---     grade_level = COALESCE(sqlc.narg(grade_level), grade_level),
---     diploma_year = COALESCE(sqlc.narg(diploma_year), diploma_year),
---     updated_at = NOW()
--- WHERE id = sqlc.arg(id);
+-- name: UpdateUserProfile :one
+UPDATE users 
+SET fullname = $2, phone_number = $3, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING id, fullname, email, created_at, updated_at;

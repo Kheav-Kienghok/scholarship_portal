@@ -100,3 +100,56 @@ func (u *UserController) GetUserProfile(c *gin.Context) {
 
 	utils.JSONIndent(c, http.StatusOK, "User profile fetched successfully", response)
 }
+
+func (u *UserController) UpdateUserProfile(c *gin.Context) {
+	var input models.UpdateUserRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		logging.Error("Failed to bind update profile input: ", err)
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	userClaims, ok := getUserClaims(c)
+	if !ok {
+		utils.JSONIndent(c, http.StatusUnauthorized, "Something went wrong!", nil)
+		return
+	}
+
+	// Fetch existing user
+	existingProfile, err := u.Queries.GetUserByEmail(ctx, userClaims.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.JSONIndent(c, http.StatusNotFound, "User not found", nil)
+			return
+		}
+		logging.Error("Failed to fetch existing user profile: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch user profile", nil)
+		return
+	}
+
+	// Build params (default to existing values)
+	params := db.UpdateUserProfileParams{
+		ID:          existingProfile.ID,
+		Fullname:    existingProfile.Fullname,
+		PhoneNumber: existingProfile.PhoneNumber,
+	}
+
+	// Only update if user actually provided a field
+	if input.Fullname != nil {
+		params.Fullname = sql.NullString{String: *input.Fullname, Valid: true}
+	}
+	if input.PhoneNumber != nil {
+		params.PhoneNumber = sql.NullString{String: *input.PhoneNumber, Valid: true}
+	}
+
+	// Run update
+	updatedUser, err := u.Queries.UpdateUserProfile(ctx, params)
+	if err != nil {
+		logging.Error("Failed to update user: ", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update user profile", nil)
+		return
+	}
+
+	utils.JSONIndent(c, http.StatusOK, "User updated successfully", updatedUser)
+}

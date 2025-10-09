@@ -57,48 +57,6 @@ func (ns NullDiplomaGrade) Value() (driver.Value, error) {
 	return string(ns.DiplomaGrade), nil
 }
 
-type OauthProvider string
-
-const (
-	OauthProviderGoogle   OauthProvider = "google"
-	OauthProviderFacebook OauthProvider = "facebook"
-)
-
-func (e *OauthProvider) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OauthProvider(s)
-	case string:
-		*e = OauthProvider(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OauthProvider: %T", src)
-	}
-	return nil
-}
-
-type NullOauthProvider struct {
-	OauthProvider OauthProvider `json:"oauth_provider"`
-	Valid         bool          `json:"valid"` // Valid is true if OauthProvider is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOauthProvider) Scan(value interface{}) error {
-	if value == nil {
-		ns.OauthProvider, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OauthProvider.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOauthProvider) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OauthProvider), nil
-}
-
 type Admin struct {
 	ID           int32          `json:"id"`
 	Fullname     sql.NullString `json:"fullname"`
@@ -116,19 +74,10 @@ type FavoriteScholarship struct {
 	CreatedAt     sql.NullTime `json:"created_at"`
 }
 
-type Notification struct {
-	ID          int32        `json:"id"`
-	UserID      int32        `json:"user_id"`
-	Message     string       `json:"message"`
-	IsProcessed sql.NullBool `json:"is_processed"`
-	CreatedAt   sql.NullTime `json:"created_at"`
-	UpdatedAt   sql.NullTime `json:"updated_at"`
-}
-
 type OauthLogin struct {
 	ID             int32          `json:"id"`
 	UserID         sql.NullInt32  `json:"user_id"`
-	Provider       OauthProvider  `json:"provider"`
+	Provider       interface{}    `json:"provider"`
 	ProviderUserID string         `json:"provider_user_id"`
 	AccessToken    string         `json:"access_token"`
 	RefreshToken   sql.NullString `json:"refresh_token"`

@@ -45,6 +45,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.enableAdmin2FAStmt, err = db.PrepareContext(ctx, enableAdmin2FA); err != nil {
 		return nil, fmt.Errorf("error preparing query EnableAdmin2FA: %w", err)
 	}
+	if q.getAdminByEmailStmt, err = db.PrepareContext(ctx, getAdminByEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAdminByEmail: %w", err)
+	}
+	if q.getAdminByIDStmt, err = db.PrepareContext(ctx, getAdminByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAdminByID: %w", err)
+	}
 	if q.getAdminByIDOrEmailStmt, err = db.PrepareContext(ctx, getAdminByIDOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAdminByIDOrEmail: %w", err)
 	}
@@ -80,6 +86,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.searchScholarshipsStmt, err = db.PrepareContext(ctx, searchScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query SearchScholarships: %w", err)
+	}
+	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
 	}
 	if q.upsertOauthLoginStmt, err = db.PrepareContext(ctx, upsertOauthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query UpsertOauthLogin: %w", err)
@@ -122,6 +131,16 @@ func (q *Queries) Close() error {
 	if q.enableAdmin2FAStmt != nil {
 		if cerr := q.enableAdmin2FAStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing enableAdmin2FAStmt: %w", cerr)
+		}
+	}
+	if q.getAdminByEmailStmt != nil {
+		if cerr := q.getAdminByEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAdminByEmailStmt: %w", cerr)
+		}
+	}
+	if q.getAdminByIDStmt != nil {
+		if cerr := q.getAdminByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAdminByIDStmt: %w", cerr)
 		}
 	}
 	if q.getAdminByIDOrEmailStmt != nil {
@@ -184,6 +203,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing searchScholarshipsStmt: %w", cerr)
 		}
 	}
+	if q.updateUserProfileStmt != nil {
+		if cerr := q.updateUserProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserProfileStmt: %w", cerr)
+		}
+	}
 	if q.upsertOauthLoginStmt != nil {
 		if cerr := q.upsertOauthLoginStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing upsertOauthLoginStmt: %w", cerr)
@@ -235,6 +259,8 @@ type Queries struct {
 	createUserStmt                           *sql.Stmt
 	deleteScholarshipByIDStmt                *sql.Stmt
 	enableAdmin2FAStmt                       *sql.Stmt
+	getAdminByEmailStmt                      *sql.Stmt
+	getAdminByIDStmt                         *sql.Stmt
 	getAdminByIDOrEmailStmt                  *sql.Stmt
 	getAllScholarshipsStmt                   *sql.Stmt
 	getScholarshipByIDStmt                   *sql.Stmt
@@ -247,6 +273,7 @@ type Queries struct {
 	listFavoritesByUserStmt                  *sql.Stmt
 	removeFavoriteStmt                       *sql.Stmt
 	searchScholarshipsStmt                   *sql.Stmt
+	updateUserProfileStmt                    *sql.Stmt
 	upsertOauthLoginStmt                     *sql.Stmt
 }
 
@@ -261,6 +288,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createUserStmt:                           q.createUserStmt,
 		deleteScholarshipByIDStmt:                q.deleteScholarshipByIDStmt,
 		enableAdmin2FAStmt:                       q.enableAdmin2FAStmt,
+		getAdminByEmailStmt:                      q.getAdminByEmailStmt,
+		getAdminByIDStmt:                         q.getAdminByIDStmt,
 		getAdminByIDOrEmailStmt:                  q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:                   q.getAllScholarshipsStmt,
 		getScholarshipByIDStmt:                   q.getScholarshipByIDStmt,
@@ -273,6 +302,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		listFavoritesByUserStmt:                  q.listFavoritesByUserStmt,
 		removeFavoriteStmt:                       q.removeFavoriteStmt,
 		searchScholarshipsStmt:                   q.searchScholarshipsStmt,
+		updateUserProfileStmt:                    q.updateUserProfileStmt,
 		upsertOauthLoginStmt:                     q.upsertOauthLoginStmt,
 	}
 }

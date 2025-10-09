@@ -12,17 +12,6 @@ migrate-create:
 	@read -p "Enter your Migration name for SQL: " name; \
 	goose -dir migrations create $$name sql
 
-migrate-reset:
-	@goose --version; \
-	set -a; . ./.env; set +a; \
-	echo "⚠️ Dropping all tables and ENUM types..."; \
-	psql "$$DATABASE_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"; \
-	psql "$$DATABASE_URL" -c "DROP TYPE IF EXISTS oauth_provider CASCADE;"; \
-	psql "$$DATABASE_URL" -c "DROP TYPE IF EXISTS diploma_grade CASCADE;"; \
-	echo "✅ Tables and ENUM types dropped. Running migrations..."; \
-	goose -dir migrations postgres "$$DATABASE_URL" up; \
-	echo "✅ Database reset and migrated successfully."
-
 # =========================
 # Docker Builds
 # =========================

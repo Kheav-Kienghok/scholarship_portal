@@ -20,41 +20,49 @@ func ValidatePassword(password string) bool {
 }
 
 func NormalizeCambodianPhone(phone string) string {
-	// Clean up whitespace and symbols
-	phone = strings.TrimSpace(phone)
-	phone = strings.ReplaceAll(phone, " ", "")
-	phone = strings.ReplaceAll(phone, "-", "")
+    // Clean up whitespace and common symbols
+    phone = strings.TrimSpace(phone)
+    phone = strings.ReplaceAll(phone, " ", "")
+    phone = strings.ReplaceAll(phone, "-", "")
+    phone = strings.ReplaceAll(phone, "(", "")
+    phone = strings.ReplaceAll(phone, ")", "")
+    phone = strings.ReplaceAll(phone, ".", "")
 
-	// Handle different possible prefixes
-	if strings.HasPrefix(phone, "0") {
-		phone = "+855" + phone[1:]
-	} else if strings.HasPrefix(phone, "855") {
-		phone = "+855" + phone[3:]
-	} else if !strings.HasPrefix(phone, "+855") {
-		phone = "+855" + phone
-	}
+    // Remove any existing country code formats and normalize
+    if strings.HasPrefix(phone, "+855") {
+        phone = phone[4:] // Remove +855, keep the rest
+    } else if strings.HasPrefix(phone, "855") {
+        phone = phone[3:] // Remove 855
+    } else if strings.HasPrefix(phone, "0") {
+        phone = phone[1:] // Remove leading 0
+    }
 
-	// Extract only digits after +855
-	re := regexp.MustCompile(`^\+855(\d+)$`)
-	matches := re.FindStringSubmatch(phone)
-	if len(matches) != 2 {
-		return phone // fallback, invalid format
-	}
+    // Remove any non-digit characters
+    re := regexp.MustCompile(`\D`)
+    phone = re.ReplaceAllString(phone, "")
 
-	digits := matches[1]
+    // For your specific case: +855171467914 becomes 171467914 (9 digits)
+    // Cambodia mobile numbers can be 8-9 digits after country code
+    if len(phone) < 8 || len(phone) > 9 {
+        return "" // Invalid length
+    }
 
-	// Enforce grouping: +855-XXX-XXX-XXX (truncate or leave as-is if shorter)
-	if len(digits) >= 9 {
-		return fmt.Sprintf("+855-%s-%s-%s", digits[:3], digits[3:6], digits[6:9])
-	} else if len(digits) >= 6 {
-		return fmt.Sprintf("+855-%s-%s-%s", digits[:3], digits[3:6], digits[6:])
-	} else {
-		return "+855-" + digits
-	}
+    // Format based on length
+    if len(phone) == 8 {
+        // Format: +855-XX-XXX-XXX (like +855-12-345-678)
+        return fmt.Sprintf("+855-%s-%s-%s", phone[:2], phone[2:5], phone[5:8])
+    } else if len(phone) == 9 {
+        // Format: +855-XXX-XXX-XXX (like +855-171-467-914)
+        return fmt.Sprintf("+855-%s-%s-%s", phone[:3], phone[3:6], phone[6:9])
+    }
+
+    return ""
 }
 
 func ValidatePhoneNumber(phone string) bool {
-	// Accepts +855-XX-XXX-XXXX or +855-XXX-XXX-XXX
-	phoneRegex := regexp.MustCompile(`^\+855-[0-9]{2,3}-[0-9]{3}-[0-9]{3,4}$`)
-	return phoneRegex.MatchString(phone)
+    // Accepts both formats:
+    // +855-XX-XXX-XXX (8 digits: 2-3-3 pattern)
+    // +855-XXX-XXX-XXX (9 digits: 3-3-3 pattern)
+    phoneRegex := regexp.MustCompile(`^\+855-([0-9]{2}-[0-9]{3}-[0-9]{3}|[0-9]{3}-[0-9]{3}-[0-9]{3})$`)
+    return phoneRegex.MatchString(phone)
 }

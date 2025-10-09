@@ -24,7 +24,7 @@ RETURNING id, user_id, provider, provider_user_id, access_token, refresh_token, 
 
 type UpsertOauthLoginParams struct {
 	UserID         sql.NullInt32  `json:"user_id"`
-	Provider       OauthProvider  `json:"provider"`
+	Provider       interface{}    `json:"provider"`
 	ProviderUserID string         `json:"provider_user_id"`
 	AccessToken    string         `json:"access_token"`
 	RefreshToken   sql.NullString `json:"refresh_token"`

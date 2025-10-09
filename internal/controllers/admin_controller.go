@@ -51,9 +51,7 @@ func (ctrl *AdminController) getAdminFromJWT(c *gin.Context) (*db.Admin, error) 
 		return nil, err
 	}
 
-	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{
-		Email: email,
-	})
+	admin, err := ctrl.Queries.GetAdminByEmail(c, email)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +81,7 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 		return
 	}
 
-	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{Email: loginInput.Email})
+	admin, err := ctrl.Queries.GetAdminByEmail(c, loginInput.Email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(loginInput.Password)) != nil {
 		utils.RespondUnauthorized(c, "Incorrect credentials")
 		return
@@ -125,7 +123,7 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 		return
 	}
 
-	admin, err := ctrl.Queries.GetAdminByIDOrEmail(c, db.GetAdminByIDOrEmailParams{Email: claims.GetEmail()})
+	admin, err := ctrl.Queries.GetAdminByEmail(c, claims.GetEmail())
 	if err != nil {
 		utils.RespondUnauthorized(c, "Incorrect credentials")
 		return
@@ -209,6 +207,7 @@ func (ctrl *AdminController) Verify2FAForAdmin(c *gin.Context) {
 	}
 
 	if err := validateAdminOTP(admin, input.OTP); err != nil {
+		logging.Error("Failed to validate OTP: ", err)
 		utils.RespondUnauthorized(c, err.Error())
 		return
 	}
