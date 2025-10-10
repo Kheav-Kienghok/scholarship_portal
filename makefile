@@ -12,6 +12,10 @@ migrate-create:
 	@read -p "Enter your Migration name for SQL: " name; \
 	goose -dir migrations create $$name sql
 
+migrate-reset:
+	@set -a; . ./.env; set +a; goose -dir migrations postgres "$$DATABASE_URL" reset
+
+
 # =========================
 # Docker Builds
 # =========================

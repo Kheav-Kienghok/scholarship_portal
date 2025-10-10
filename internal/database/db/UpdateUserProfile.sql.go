@@ -12,27 +12,24 @@ import (
 
 const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
-SET fullname = COALESCE($1, fullname),
-    phone_number = COALESCE($2, phone_number)
-WHERE id = $3
-RETURNING id, fullname, email, password_hash, phone_number, created_at, updated_at
+SET fullname = COALESCE($1, fullname)
+WHERE id = $2
+RETURNING id, fullname, email, password_hash, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
-	Fullname    sql.NullString `json:"fullname"`
-	PhoneNumber sql.NullString `json:"phone_number"`
-	ID          int32          `json:"id"`
+	Fullname sql.NullString `json:"fullname"`
+	ID       int32          `json:"id"`
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
-	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile, arg.Fullname, arg.PhoneNumber, arg.ID)
+	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile, arg.Fullname, arg.ID)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
-		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

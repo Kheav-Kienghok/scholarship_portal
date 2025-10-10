@@ -105,7 +105,6 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 			Email:        userInfo.Email,
 			Fullname:     sql.NullString{Valid: false},
 			PasswordHash: sql.NullString{Valid: false},
-			PhoneNumber:  sql.NullString{Valid: false},
 		})
 		if err != nil {
 			logging.Error("DB: Failed to create user:", err)

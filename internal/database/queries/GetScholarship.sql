@@ -52,3 +52,26 @@ WHERE (institution_code ILIKE '%' || sqlc.arg('code') || '%' OR sqlc.arg('code')
             WHERE p->>0 ILIKE '%' || sqlc.arg('program') || '%'
         ) OR sqlc.arg('program') IS NULL
       );
+
+-- name: UpdateScholarship :one
+UPDATE scholarships SET
+    title = $2,
+    provider = $3,
+    description = $4,
+    institution_info = $5,
+    requirements = $6,
+    extra_notes = $7,
+    deadline_end = $8,
+    official_link = $9,
+    photo_url = $10,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateScholarshipJSONB :one
+UPDATE scholarships SET
+    institution_info = COALESCE($2, institution_info),
+    requirements = COALESCE($3, requirements),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;

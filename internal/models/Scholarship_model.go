@@ -30,3 +30,21 @@ type ScholarshipResponse struct {
 	PhotoURL        *string         `json:"photo_url,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
 }
+
+// Add these to your models package
+type UpdateScholarshipRequest struct {
+	Title           string          `json:"title,omitempty"`
+	Provider        string          `json:"provider,omitempty"`
+	Description     *string         `json:"description,omitempty"`
+	InstitutionInfo json.RawMessage `json:"institution_info,omitempty"`
+	Requirements    json.RawMessage `json:"requirements,omitempty"`
+	ExtraNotes      *string         `json:"extra_notes,omitempty"`
+	DeadlineEnd     *time.Time      `json:"deadline_end,omitempty"`
+	OfficialLink    *string         `json:"official_link,omitempty"`
+	PhotoURL        *string         `json:"photo_url,omitempty"`
+}
+
+type UpdateJSONBRequest struct {
+	InstitutionInfo json.RawMessage `json:"institution_info,omitempty"`
+	Requirements    json.RawMessage `json:"requirements,omitempty"`
+}

@@ -33,8 +33,7 @@ DELETE FROM student_profiles WHERE student_id = $1;
 SELECT 
     u.id as user_id,
     u.fullname,
-    u.email,
-    u.phone_number,                
+    u.email,               
     sp.high_school,
     sp.grade_level,
     sp.diploma_year,

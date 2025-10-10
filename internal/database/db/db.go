@@ -84,9 +84,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByIDOrEmailStmt, err = db.PrepareContext(ctx, getUserByIDOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByIDOrEmail: %w", err)
 	}
-	if q.getUserWithProfileStmt, err = db.PrepareContext(ctx, getUserWithProfile); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUserWithProfile: %w", err)
-	}
 	if q.getUserWithStudentProfileStmt, err = db.PrepareContext(ctx, getUserWithStudentProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserWithStudentProfile: %w", err)
 	}
@@ -98,6 +95,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.searchScholarshipsStmt, err = db.PrepareContext(ctx, searchScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query SearchScholarships: %w", err)
+	}
+	if q.updateScholarshipStmt, err = db.PrepareContext(ctx, updateScholarship); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateScholarship: %w", err)
+	}
+	if q.updateScholarshipJSONBStmt, err = db.PrepareContext(ctx, updateScholarshipJSONB); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateScholarshipJSONB: %w", err)
 	}
 	if q.updateStudentProfileStmt, err = db.PrepareContext(ctx, updateStudentProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStudentProfile: %w", err)
@@ -213,11 +216,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserByIDOrEmailStmt: %w", cerr)
 		}
 	}
-	if q.getUserWithProfileStmt != nil {
-		if cerr := q.getUserWithProfileStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUserWithProfileStmt: %w", cerr)
-		}
-	}
 	if q.getUserWithStudentProfileStmt != nil {
 		if cerr := q.getUserWithStudentProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserWithStudentProfileStmt: %w", cerr)
@@ -236,6 +234,16 @@ func (q *Queries) Close() error {
 	if q.searchScholarshipsStmt != nil {
 		if cerr := q.searchScholarshipsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing searchScholarshipsStmt: %w", cerr)
+		}
+	}
+	if q.updateScholarshipStmt != nil {
+		if cerr := q.updateScholarshipStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateScholarshipStmt: %w", cerr)
+		}
+	}
+	if q.updateScholarshipJSONBStmt != nil {
+		if cerr := q.updateScholarshipJSONBStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateScholarshipJSONBStmt: %w", cerr)
 		}
 	}
 	if q.updateStudentProfileStmt != nil {
@@ -312,11 +320,12 @@ type Queries struct {
 	getUserByEmailStmt                       *sql.Stmt
 	getUserByIDStmt                          *sql.Stmt
 	getUserByIDOrEmailStmt                   *sql.Stmt
-	getUserWithProfileStmt                   *sql.Stmt
 	getUserWithStudentProfileStmt            *sql.Stmt
 	listFavoritesByUserStmt                  *sql.Stmt
 	removeFavoriteStmt                       *sql.Stmt
 	searchScholarshipsStmt                   *sql.Stmt
+	updateScholarshipStmt                    *sql.Stmt
+	updateScholarshipJSONBStmt               *sql.Stmt
 	updateStudentProfileStmt                 *sql.Stmt
 	updateUserProfileStmt                    *sql.Stmt
 	upsertOauthLoginStmt                     *sql.Stmt
@@ -346,11 +355,12 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserByEmailStmt:                       q.getUserByEmailStmt,
 		getUserByIDStmt:                          q.getUserByIDStmt,
 		getUserByIDOrEmailStmt:                   q.getUserByIDOrEmailStmt,
-		getUserWithProfileStmt:                   q.getUserWithProfileStmt,
 		getUserWithStudentProfileStmt:            q.getUserWithStudentProfileStmt,
 		listFavoritesByUserStmt:                  q.listFavoritesByUserStmt,
 		removeFavoriteStmt:                       q.removeFavoriteStmt,
 		searchScholarshipsStmt:                   q.searchScholarshipsStmt,
+		updateScholarshipStmt:                    q.updateScholarshipStmt,
+		updateScholarshipJSONBStmt:               q.updateScholarshipJSONBStmt,
 		updateStudentProfileStmt:                 q.updateStudentProfileStmt,
 		updateUserProfileStmt:                    q.updateUserProfileStmt,
 		upsertOauthLoginStmt:                     q.upsertOauthLoginStmt,

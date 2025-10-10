@@ -14,9 +14,8 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     fullname, 
     email,
-    password_hash,
-    phone_number
-) VALUES ($1, $2, $3, $4)
+    password_hash
+) VALUES ($1, $2, $3)
 RETURNING id, fullname, email, created_at, updated_at
 `
 
@@ -24,7 +23,6 @@ type CreateUserParams struct {
 	Fullname     sql.NullString `json:"fullname"`
 	Email        string         `json:"email"`
 	PasswordHash sql.NullString `json:"password_hash"`
-	PhoneNumber  sql.NullString `json:"phone_number"`
 }
 
 type CreateUserRow struct {
@@ -36,12 +34,7 @@ type CreateUserRow struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser,
-		arg.Fullname,
-		arg.Email,
-		arg.PasswordHash,
-		arg.PhoneNumber,
-	)
+	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.Fullname, arg.Email, arg.PasswordHash)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
@@ -54,7 +47,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+SELECT id, fullname, email, password_hash, created_at, updated_at
 FROM users 
 WHERE email = $1
 `
@@ -67,7 +60,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
-		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -75,7 +67,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fullname, email, password_hash, phone_number, created_at, updated_at
+SELECT id, fullname, email, password_hash, created_at, updated_at
 FROM users 
 WHERE id = $1
 `
@@ -88,7 +80,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
-		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -101,7 +92,6 @@ SELECT
     fullname,
     email,
     password_hash,
-    phone_number,
     created_at,
     updated_at
 FROM users
@@ -121,7 +111,6 @@ func (q *Queries) GetUserByIDOrEmail(ctx context.Context, arg GetUserByIDOrEmail
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
-		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

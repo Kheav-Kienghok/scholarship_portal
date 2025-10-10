@@ -93,8 +93,7 @@ const getUserWithStudentProfile = `-- name: GetUserWithStudentProfile :one
 SELECT 
     u.id as user_id,
     u.fullname,
-    u.email,
-    u.phone_number,                
+    u.email,               
     sp.high_school,
     sp.grade_level,
     sp.diploma_year,
@@ -111,7 +110,6 @@ type GetUserWithStudentProfileRow struct {
 	UserID           int32                 `json:"user_id"`
 	Fullname         sql.NullString        `json:"fullname"`
 	Email            string                `json:"email"`
-	PhoneNumber      sql.NullString        `json:"phone_number"`
 	HighSchool       sql.NullString        `json:"high_school"`
 	GradeLevel       sql.NullString        `json:"grade_level"`
 	DiplomaYear      sql.NullInt32         `json:"diploma_year"`
@@ -128,7 +126,6 @@ func (q *Queries) GetUserWithStudentProfile(ctx context.Context, id int32) (GetU
 		&i.UserID,
 		&i.Fullname,
 		&i.Email,
-		&i.PhoneNumber,
 		&i.HighSchool,
 		&i.GradeLevel,
 		&i.DiplomaYear,

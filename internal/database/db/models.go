@@ -71,7 +71,6 @@ type User struct {
 	Fullname     sql.NullString `json:"fullname"`
 	Email        string         `json:"email"`
 	PasswordHash sql.NullString `json:"password_hash"`
-	PhoneNumber  sql.NullString `json:"phone_number"`
 	CreatedAt    sql.NullTime   `json:"created_at"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 }

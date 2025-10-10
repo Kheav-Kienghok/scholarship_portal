@@ -47,24 +47,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 		return
 	}
 
-	if phone := strings.TrimSpace(input.PhoneNumber); phone != "" {
-
-		// Case 1: Already valid → skip normalization
-		if utils.ValidatePhoneNumber(phone) {
-			logging.Info("Phone number is already valid:", phone)
-			input.PhoneNumber = phone
-		} else {
-			// Case 2: Try to normalize
-			normalized := utils.NormalizeCambodianPhone(phone)
-			if normalized == "" || !utils.ValidatePhoneNumber(normalized) {
-				logging.Warn("Invalid phone number format:", phone)
-				utils.JSONIndent(c, http.StatusBadRequest, "Invalid phone number format 1", nil)
-				return
-			}
-			input.PhoneNumber = normalized
-		}
-	}
-
 	validatePassword := utils.ValidatePassword(input.Password)
 	if !validatePassword {
 		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 6 characters", nil)
@@ -94,7 +76,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 		Fullname:     sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
 		Email:        strings.ToLower(input.Email),
 		PasswordHash: sql.NullString{String: string(hashedPassword), Valid: true},
-		PhoneNumber:  sql.NullString{String: input.PhoneNumber, Valid: input.PhoneNumber != ""},
 	}
 
 	_, err = r.Queries.CreateUser(c, params)

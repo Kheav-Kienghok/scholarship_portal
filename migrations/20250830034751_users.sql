@@ -11,13 +11,6 @@ CREATE TABLE users (
         ),
 
     password_hash VARCHAR(255),
-
-    -- Phone number: supports +855-XX-XXX-XXX or +855-XX-XXX-XXXX
-    phone_number VARCHAR(20) UNIQUE
-        CHECK (
-            TRIM(phone_number) ~ '^\+855-[0-9]{2,3}-[0-9]{3}-[0-9]{3,4}$'
-        ),
-
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

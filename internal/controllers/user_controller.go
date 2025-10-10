@@ -27,18 +27,6 @@ func UserControllerHandler(dbConn *sql.DB, queries *db.Queries) *UserController 
 	}
 }
 
-// Helper functions
-func sliceToNullRawMessage(slice []string) pqtype.NullRawMessage {
-	if slice == nil {
-		return pqtype.NullRawMessage{Valid: false}
-	}
-	b, _ := json.Marshal(slice)
-	return pqtype.NullRawMessage{
-		RawMessage: b,
-		Valid:      true,
-	}
-}
-
 func getUserClaims(c *gin.Context) (*tokens.UserClaims, bool) {
 	claims, ok := c.Get("claims")
 	if !ok {
@@ -104,6 +92,12 @@ func (u *UserController) UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	// Validate input using utils helper
+	if err := utils.ValidateUserProfileInput(input); err != nil {
+		utils.JSONIndent(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
 	userClaims, ok := getUserClaims(c)
 	if !ok {
 		utils.JSONIndent(c, http.StatusUnauthorized, "Unauthorized", nil)
@@ -163,8 +157,8 @@ func (u *UserController) updateProfileAtomic(ctx context.Context, queries *db.Qu
 		return db.GetUserWithStudentProfileRow{}, err
 	}
 
-	// Update user basic info if provided
-	if u.hasUserFields(input) {
+	// Update user basic info if provided - using utils helper
+	if utils.HasUserFields(input) {
 		params := u.buildUserUpdateParams(userID, currentProfile, input)
 		_, err := queries.UpdateUserProfile(ctx, params)
 		if err != nil {
@@ -172,9 +166,9 @@ func (u *UserController) updateProfileAtomic(ctx context.Context, queries *db.Qu
 		}
 	}
 
-	// Handle student profile
-	if u.hasStudentProfileFields(input) {
-		if u.hasExistingStudentProfile(currentProfile) {
+	// Handle student profile - using utils helpers
+	if utils.HasStudentProfileFields(input) {
+		if utils.HasExistingStudentProfile(currentProfile) {
 			// Update existing student profile
 			params := u.buildStudentUpdateParams(userID, currentProfile, input)
 			_, err := queries.UpdateStudentProfile(ctx, params)
@@ -198,16 +192,12 @@ func (u *UserController) updateProfileAtomic(ctx context.Context, queries *db.Qu
 // Helper methods for building parameters
 func (u *UserController) buildUserUpdateParams(userID int32, current db.GetUserWithStudentProfileRow, input models.UpdateUserProfileRequest) db.UpdateUserProfileParams {
 	params := db.UpdateUserProfileParams{
-		ID:          userID,
-		Fullname:    current.Fullname,
-		PhoneNumber: current.PhoneNumber,
+		ID:       userID,
+		Fullname: current.Fullname,
 	}
 
 	if input.Fullname != nil {
 		params.Fullname = sql.NullString{String: *input.Fullname, Valid: *input.Fullname != ""}
-	}
-	if input.PhoneNumber != nil {
-		params.PhoneNumber = sql.NullString{String: *input.PhoneNumber, Valid: *input.PhoneNumber != ""}
 	}
 
 	return params
@@ -236,7 +226,7 @@ func (u *UserController) buildStudentUpdateParams(userID int32, current db.GetUs
 		params.DiplomaGrade = sql.NullString{String: *input.DiplomaGrade, Valid: *input.DiplomaGrade != ""}
 	}
 	if input.SelectMajors != nil { // Handle empty arrays correctly
-		params.SelectMajors = sliceToNullRawMessage(input.SelectMajors)
+		params.SelectMajors = utils.SliceToNullRawMessage(input.SelectMajors)
 	}
 
 	return params
@@ -265,47 +255,24 @@ func (u *UserController) buildStudentCreateParams(userID int32, input models.Upd
 		params.DiplomaGrade = sql.NullString{String: *input.DiplomaGrade, Valid: *input.DiplomaGrade != ""}
 	}
 	if input.SelectMajors != nil {
-		params.SelectMajors = sliceToNullRawMessage(input.SelectMajors)
+		params.SelectMajors = utils.SliceToNullRawMessage(input.SelectMajors)
 	}
 
 	return params
 }
 
-// Helper validation methods
-func (u *UserController) hasUserFields(input models.UpdateUserProfileRequest) bool {
-	return input.Fullname != nil || input.PhoneNumber != nil
-}
-
-func (u *UserController) hasStudentProfileFields(input models.UpdateUserProfileRequest) bool {
-	return input.HighSchool != nil ||
-		input.GradeLevel != nil ||
-		input.DiplomaYear != nil ||
-		input.DiplomaGrade != nil ||
-		input.SelectMajors != nil
-}
-
-func (u *UserController) hasExistingStudentProfile(profile db.GetUserWithStudentProfileRow) bool {
-	return profile.HighSchool.Valid ||
-		profile.GradeLevel.Valid ||
-		profile.DiplomaYear.Valid ||
-		profile.DiplomaGrade.Valid ||
-		profile.SelectMajors.Valid
-}
-
 // buildUnifiedUserProfileResponse constructs response with proper null handling
 func buildUnifiedUserProfileResponse(data db.GetUserWithStudentProfileRow) models.UnifiedUserProfileResponse {
 	response := models.UnifiedUserProfileResponse{
-		ID:          data.UserID,
-		Fullname:    data.Fullname.String,
-		Email:       data.Email,
-		PhoneNumber: data.PhoneNumber.String,
+		ID:        data.UserID,
+		Fullname:  data.Fullname.String,
+		Email:     data.Email,
 		CreatedAt: data.ProfileCreatedAt.Time,
 		UpdatedAt: data.ProfileUpdatedAt.Time,
 	}
 
-	// Add student profile if any student data exists
-	if data.HighSchool.Valid || data.GradeLevel.Valid || data.DiplomaYear.Valid ||
-		data.DiplomaGrade.Valid || data.SelectMajors.Valid {
+	// Add student profile if any student data exists - using utils helper
+	if utils.HasExistingStudentProfile(data) {
 		var selectMajors []string
 		if data.SelectMajors.Valid {
 			if err := json.Unmarshal(data.SelectMajors.RawMessage, &selectMajors); err != nil {
@@ -314,7 +281,7 @@ func buildUnifiedUserProfileResponse(data db.GetUserWithStudentProfileRow) model
 			}
 		}
 
-		response.StudentProfile = &models.StudentProfileResponse{	
+		response.StudentProfile = &models.StudentProfileResponse{
 			HighSchool:   data.HighSchool.String,
 			GradeLevel:   data.GradeLevel.String,
 			DiplomaYear:  data.DiplomaYear.Int32,

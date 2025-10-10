@@ -270,3 +270,100 @@ func (q *Queries) SearchScholarships(ctx context.Context, arg SearchScholarships
 	}
 	return items, nil
 }
+
+const updateScholarship = `-- name: UpdateScholarship :one
+UPDATE scholarships SET
+    title = $2,
+    provider = $3,
+    description = $4,
+    institution_info = $5,
+    requirements = $6,
+    extra_notes = $7,
+    deadline_end = $8,
+    official_link = $9,
+    photo_url = $10,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+`
+
+type UpdateScholarshipParams struct {
+	ID              int32                 `json:"id"`
+	Title           string                `json:"title"`
+	Provider        string                `json:"provider"`
+	Description     sql.NullString        `json:"description"`
+	InstitutionInfo pqtype.NullRawMessage `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+	ExtraNotes      sql.NullString        `json:"extra_notes"`
+	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
+	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
+}
+
+func (q *Queries) UpdateScholarship(ctx context.Context, arg UpdateScholarshipParams) (Scholarship, error) {
+	row := q.queryRow(ctx, q.updateScholarshipStmt, updateScholarship,
+		arg.ID,
+		arg.Title,
+		arg.Provider,
+		arg.Description,
+		arg.InstitutionInfo,
+		arg.Requirements,
+		arg.ExtraNotes,
+		arg.DeadlineEnd,
+		arg.OfficialLink,
+		arg.PhotoUrl,
+	)
+	var i Scholarship
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Provider,
+		&i.Description,
+		&i.InstitutionInfo,
+		&i.Requirements,
+		&i.ExtraNotes,
+		&i.DeadlineEnd,
+		&i.OfficialLink,
+		&i.PhotoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.InstitutionCode,
+	)
+	return i, err
+}
+
+const updateScholarshipJSONB = `-- name: UpdateScholarshipJSONB :one
+UPDATE scholarships SET
+    institution_info = COALESCE($2, institution_info),
+    requirements = COALESCE($3, requirements),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+`
+
+type UpdateScholarshipJSONBParams struct {
+	ID              int32                 `json:"id"`
+	InstitutionInfo pqtype.NullRawMessage `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+}
+
+func (q *Queries) UpdateScholarshipJSONB(ctx context.Context, arg UpdateScholarshipJSONBParams) (Scholarship, error) {
+	row := q.queryRow(ctx, q.updateScholarshipJSONBStmt, updateScholarshipJSONB, arg.ID, arg.InstitutionInfo, arg.Requirements)
+	var i Scholarship
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Provider,
+		&i.Description,
+		&i.InstitutionInfo,
+		&i.Requirements,
+		&i.ExtraNotes,
+		&i.DeadlineEnd,
+		&i.OfficialLink,
+		&i.PhotoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.InstitutionCode,
+	)
+	return i, err
+}
