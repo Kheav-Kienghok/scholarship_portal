@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
@@ -39,13 +40,14 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 
 	user, err := ctrl.Queries.GetUserByEmail(c, input.Email)
 	if err != nil {
-		utils.JSONIndent(c, http.StatusUnauthorized, "User not found", nil)
+		utils.JSONIndent(c, http.StatusUnauthorized, "Incorrect Credential", nil)
 		return
 	}
 
 	// Compare hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(input.Password)); err != nil {
-		utils.JSONIndent(c, http.StatusUnauthorized, "Incorrect password", nil)
+		logging.Error("Password mismatch:", err)
+		utils.JSONIndent(c, http.StatusOK, "Incorrect Credential", nil)
 		return
 	}
 
@@ -53,7 +55,7 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 	if err != nil {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not generate token", nil)
 		return
-	}
+	}	
 
 	loginResponse := models.LoginResponse{
 		Token: token,

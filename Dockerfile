@@ -22,6 +22,7 @@ FROM alpine:3.19 AS debug
 
 WORKDIR /app
 COPY --from=builder /app/main .
+COPY --from=builder /app/public ./public
 
 # Install some useful debug tools
 RUN apk add --no-cache curl bash

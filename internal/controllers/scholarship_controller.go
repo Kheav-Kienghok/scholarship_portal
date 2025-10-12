@@ -312,7 +312,7 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 	scholarship, err := ctrl.Queries.UpdateScholarship(c, updateParams)
 	if err != nil {
 		logging.Error("Failed to update scholarship: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update scholarship", nil)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Internal Server Error", nil)
 		return
 	}
 
@@ -364,7 +364,7 @@ func (ctrl *ScholarshipController) UpdateScholarshipJSONB(c *gin.Context) {
 	scholarship, err := ctrl.Queries.UpdateScholarshipJSONB(c, params)
 	if err != nil {
 		logging.Error("Failed to update scholarship JSONB: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update JSONB fields", nil)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Internal Server Error", nil)
 		return
 	}
 

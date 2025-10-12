@@ -16,12 +16,33 @@ func GenerateToken(id int32, fullname, email, role string) (string, error) {
 	}
 
 	claims := AdminClaims{
-		ID:    int32(id),
-		Email: email,
-		Role:  role,
+		ID:       int32(id),
+		Username: fullname,
+		Email:    email,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
+}
+
+func GenerateAdminToken(id int32, username, email, role string) (string, error) {
+	if role == "" {
+		role = "admin" // set default if empty
+	}
+
+	claims := AdminClaims{
+		ID:       int32(id),
+		Username: username,
+		Email:    email,
+		Role:     role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
 		},
 	}
 

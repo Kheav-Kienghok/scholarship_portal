@@ -80,12 +80,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	_, err = r.Queries.CreateUser(c, params)
 	if err != nil {
-
-		if strings.Contains(err.Error(), "users_phone_number_key") {
-			utils.JSONIndent(c, http.StatusBadRequest, "Phone number is already taken", nil)
-			return
-		}
-
 		logging.Error("DB: Failed to create user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return

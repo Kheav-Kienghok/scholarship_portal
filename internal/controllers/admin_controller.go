@@ -102,7 +102,7 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 }
 
 func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
-	
+
 	var otpInput models.AdminOTPInput
 	if err := c.ShouldBindJSON(&otpInput); err != nil {
 		logging.Error("Failed to bind OTP input: ", err)
@@ -134,7 +134,7 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 		return
 	}
 
-	token, err := tokens.GenerateToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
+	token, err := tokens.GenerateAdminToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
 	if err != nil {
 		utils.RespondInternalError(c, "Could not generate token")
 		return
