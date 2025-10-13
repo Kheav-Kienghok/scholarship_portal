@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
@@ -12,8 +13,9 @@ import (
 
 // SetupRoutes configures all the application routes
 func SetupRoutes(router *gin.Engine, db *database.Database) {
-    // Add Recovery middleware first (catches panics and recovers)
-    router.Use(gin.Recovery())
+
+	router.Use(middlewares.ErrorHandler())
+	router.Use(gin.Recovery())
 
 	router.GET("/favicon.ico", func(c *gin.Context) {
 		c.Status(204)

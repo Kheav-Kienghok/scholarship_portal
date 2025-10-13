@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/errors"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
@@ -51,16 +52,12 @@ func GenerateState() (string, error) {
 func NewFBAuthHandler(queries *db.Queries) *FBAuthHandler {
 	clientID := os.Getenv("FB_APP_ID")
 	clientSecret := os.Getenv("FB_APP_SECRET")
-	redirectURI := os.Getenv("FB_REDIRECT_URI")
+	redirectURI := os.Getenv("FB_REDIRECT_URL")
 
-	if clientID == "" || clientSecret == "" {
-		logging.Error("FB_APP_ID and FB_APP_SECRET must be set")
-		panic("Facebook OAuth credentials not configured")
-	}
-
-	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/api/v1/auth/facebook/callback"
-		logging.Info("Using default Facebook redirect URI:", redirectURI)
+	if clientID == "" || clientSecret == "" || redirectURI == "" {
+		logging.Error("FB_APP_ID, FB_APP_SECRET, and FB_REDIRECT_URL must be set")
+		return nil
+		// panic("Facebook OAuth credentials not configured")
 	}
 
 	oauthConfig := &oauth2.Config{
@@ -220,7 +217,7 @@ func (h *FBAuthHandler) CallbackHandler(c *gin.Context) {
 			userRow, err := h.Queries.CreateUser(ctx, createUserParams)
 			if err != nil {
 				logging.Error("Failed to create user:", err)
-				utils.JSONIndent(c, http.StatusInternalServerError, "Failed to create user account", nil)
+				errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Failed to create user account")
 				return
 			}
 
@@ -285,10 +282,10 @@ func (h *FBAuthHandler) CallbackHandler(c *gin.Context) {
 
 	// Prepare user response
 	userResponse := gin.H{
-		"id":          user.ID,
-		"full_name":   user.Fullname,
-		"provider":    "facebook",
-		"created_at":  user.CreatedAt.Time.UTC().Format("2006-01-02"),
+		"id":         user.ID,
+		"full_name":  user.Fullname,
+		"provider":   "facebook",
+		"created_at": user.CreatedAt.Time.UTC().Format("2006-01-02"),
 	}
 
 	if user.Email != "" {

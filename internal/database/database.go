@@ -28,7 +28,7 @@ func (d *Database) Connect() error {
 	db, err := sql.Open("pgx", d.ConnString)
 	if err != nil {
 		logging.Error(fmt.Sprintf("Failed to connect to database: %v", err))
-		return err
+		return fmt.Errorf("database connection failed") // Sanitized error
 	}
 
 	// Configure connection pool for robustness

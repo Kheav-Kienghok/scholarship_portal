@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/errors"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
@@ -67,7 +68,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 	token, err := cfg.Exchange(context.Background(), code)
 	if err != nil {
 		logging.Error("GOOGLE: Failed to exchange token: ", err)
-		utils.JSONIndent(c, http.StatusBadRequest, "Failed to exchange token", nil)
+		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Failed to authenticate with Google")
 		return
 	}
 

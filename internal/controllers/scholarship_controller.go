@@ -11,6 +11,7 @@ import (
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/builder"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/errors"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
@@ -129,10 +130,16 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 
 	scholarships, err := ctrl.Queries.GetAllScholarships(c)
 	if err != nil {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Could not fetch scholarships", err.Error())
+		if err == sql.ErrNoRows {
+			// Return empty array instead of error for no rows
+			utils.JSONIndent(c, http.StatusOK, "No scholarships found", []models.ScholarshipResponse{})
+			return
+		}
+		// Apply sanitized error handling
+		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch scholarships")
 		return
 	}
-
+	
 	var response []models.ScholarshipResponse
 	for _, s := range scholarships {
 		sr := builder.MapScholarship(s)
