@@ -25,8 +25,25 @@ func GetNullStringOrExisting(input *string, existing sql.NullString) sql.NullStr
 
 // GetNullRawMessageOrExisting returns a new NullRawMessage if input is provided, otherwise returns existing
 func GetNullRawMessageOrExisting(input interface{}, existing pqtype.NullRawMessage) pqtype.NullRawMessage {
-	if input != nil {
-		return ToNullRawMessage(input.(json.RawMessage))
+	if input == nil {
+		return existing
 	}
-	return existing
+
+	// Handle pointers properly
+	switch v := input.(type) {
+	case *json.RawMessage:
+		if v == nil {
+			return existing
+		}
+		return ToNullRawMessage(*v)
+
+	case json.RawMessage:
+		if len(v) == 0 {
+			return existing
+		}
+		return ToNullRawMessage(v)
+
+	default:
+		return existing
+	}
 }

@@ -10,6 +10,217 @@ import (
 	"database/sql"
 )
 
+const createOAuthLogin = `-- name: CreateOAuthLogin :one
+INSERT INTO oauth_logins (
+    user_id,
+    provider,
+    provider_user_id,
+    access_token,
+    refresh_token,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, NOW(), NOW()
+) RETURNING id, user_id, provider, provider_user_id, access_token, refresh_token, created_at, updated_at
+`
+
+type CreateOAuthLoginParams struct {
+	UserID         sql.NullInt32  `json:"user_id"`
+	Provider       interface{}    `json:"provider"`
+	ProviderUserID string         `json:"provider_user_id"`
+	AccessToken    string         `json:"access_token"`
+	RefreshToken   sql.NullString `json:"refresh_token"`
+}
+
+func (q *Queries) CreateOAuthLogin(ctx context.Context, arg CreateOAuthLoginParams) (OauthLogin, error) {
+	row := q.queryRow(ctx, q.createOAuthLoginStmt, createOAuthLogin,
+		arg.UserID,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.AccessToken,
+		arg.RefreshToken,
+	)
+	var i OauthLogin
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteOAuthLogin = `-- name: DeleteOAuthLogin :exec
+DELETE FROM oauth_logins
+WHERE user_id = $1 AND provider = $2
+`
+
+type DeleteOAuthLoginParams struct {
+	UserID   sql.NullInt32 `json:"user_id"`
+	Provider interface{}   `json:"provider"`
+}
+
+func (q *Queries) DeleteOAuthLogin(ctx context.Context, arg DeleteOAuthLoginParams) error {
+	_, err := q.exec(ctx, q.deleteOAuthLoginStmt, deleteOAuthLogin, arg.UserID, arg.Provider)
+	return err
+}
+
+const getOAuthLoginByProvider = `-- name: GetOAuthLoginByProvider :one
+SELECT ol.id, ol.user_id, ol.provider, ol.provider_user_id, ol.access_token, ol.refresh_token, ol.created_at, ol.updated_at, u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at FROM oauth_logins ol
+JOIN users u ON ol.user_id = u.id
+WHERE ol.provider = $1 AND ol.provider_user_id = $2
+LIMIT 1
+`
+
+type GetOAuthLoginByProviderParams struct {
+	Provider       interface{} `json:"provider"`
+	ProviderUserID string      `json:"provider_user_id"`
+}
+
+type GetOAuthLoginByProviderRow struct {
+	ID             int32          `json:"id"`
+	UserID         sql.NullInt32  `json:"user_id"`
+	Provider       interface{}    `json:"provider"`
+	ProviderUserID string         `json:"provider_user_id"`
+	AccessToken    string         `json:"access_token"`
+	RefreshToken   sql.NullString `json:"refresh_token"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	ID_2           int32          `json:"id_2"`
+	Fullname       sql.NullString `json:"fullname"`
+	Email          string         `json:"email"`
+	PasswordHash   sql.NullString `json:"password_hash"`
+	CreatedAt_2    sql.NullTime   `json:"created_at_2"`
+	UpdatedAt_2    sql.NullTime   `json:"updated_at_2"`
+}
+
+func (q *Queries) GetOAuthLoginByProvider(ctx context.Context, arg GetOAuthLoginByProviderParams) (GetOAuthLoginByProviderRow, error) {
+	row := q.queryRow(ctx, q.getOAuthLoginByProviderStmt, getOAuthLoginByProvider, arg.Provider, arg.ProviderUserID)
+	var i GetOAuthLoginByProviderRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ID_2,
+		&i.Fullname,
+		&i.Email,
+		&i.PasswordHash,
+		&i.CreatedAt_2,
+		&i.UpdatedAt_2,
+	)
+	return i, err
+}
+
+const getOAuthLoginsByUserID = `-- name: GetOAuthLoginsByUserID :many
+SELECT id, user_id, provider, provider_user_id, access_token, refresh_token, created_at, updated_at FROM oauth_logins
+WHERE user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetOAuthLoginsByUserID(ctx context.Context, userID sql.NullInt32) ([]OauthLogin, error) {
+	rows, err := q.query(ctx, q.getOAuthLoginsByUserIDStmt, getOAuthLoginsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OauthLogin
+	for rows.Next() {
+		var i OauthLogin
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Provider,
+			&i.ProviderUserID,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserByOAuthProvider = `-- name: GetUserByOAuthProvider :one
+SELECT u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at FROM users u
+JOIN oauth_logins ol ON u.id = ol.user_id
+WHERE ol.provider = $1 AND ol.provider_user_id = $2
+LIMIT 1
+`
+
+type GetUserByOAuthProviderParams struct {
+	Provider       interface{} `json:"provider"`
+	ProviderUserID string      `json:"provider_user_id"`
+}
+
+func (q *Queries) GetUserByOAuthProvider(ctx context.Context, arg GetUserByOAuthProviderParams) (User, error) {
+	row := q.queryRow(ctx, q.getUserByOAuthProviderStmt, getUserByOAuthProvider, arg.Provider, arg.ProviderUserID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Fullname,
+		&i.Email,
+		&i.PasswordHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateOAuthLogin = `-- name: UpdateOAuthLogin :one
+UPDATE oauth_logins SET
+    access_token = $3,
+    refresh_token = $4,
+    updated_at = NOW()
+WHERE user_id = $1 AND provider = $2
+RETURNING id, user_id, provider, provider_user_id, access_token, refresh_token, created_at, updated_at
+`
+
+type UpdateOAuthLoginParams struct {
+	UserID       sql.NullInt32  `json:"user_id"`
+	Provider     interface{}    `json:"provider"`
+	AccessToken  string         `json:"access_token"`
+	RefreshToken sql.NullString `json:"refresh_token"`
+}
+
+func (q *Queries) UpdateOAuthLogin(ctx context.Context, arg UpdateOAuthLoginParams) (OauthLogin, error) {
+	row := q.queryRow(ctx, q.updateOAuthLoginStmt, updateOAuthLogin,
+		arg.UserID,
+		arg.Provider,
+		arg.AccessToken,
+		arg.RefreshToken,
+	)
+	var i OauthLogin
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const upsertOauthLogin = `-- name: UpsertOauthLogin :one
 INSERT INTO oauth_logins (user_id, provider, provider_user_id, access_token, refresh_token)
 VALUES ($1, $2, $3, $4, $5)

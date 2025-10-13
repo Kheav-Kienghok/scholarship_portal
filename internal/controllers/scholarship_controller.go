@@ -227,19 +227,6 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 		return
 	}
 
-	// Get JSON string from form field (similar to create)
-	jsonStr := c.PostForm("data")
-	if jsonStr == "" {
-		utils.JSONIndent(c, http.StatusBadRequest, "Missing JSON payload", nil)
-		return
-	}
-
-	var input models.UpdateScholarshipRequest
-	if err := json.Unmarshal([]byte(jsonStr), &input); err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
-		return
-	}
-
 	// Check if scholarship exists
 	existing, err := ctrl.Queries.GetScholarshipByID(c, int32(id))
 	if err != nil {
@@ -247,41 +234,62 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 		return
 	}
 
-	// Handle photo upload if provided
-	var photoKey *string
-	file, handler, err := c.Request.FormFile("photo")
-	if err == nil {
-		defer file.Close()
+	contentType := c.ContentType()
+	var input models.UpdateScholarshipRequest
 
-		title_name := utils.SanitizeString(input.Title)
-		if title_name == "" {
-			title_name = utils.SanitizeString(existing.Title) // fallback to existing title
+	// --- Handle multipart/form-data (photo + JSON fields) ---
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		jsonStr := c.PostForm("data")
+		if jsonStr == "" {
+			utils.JSONIndent(c, http.StatusBadRequest, "Missing JSON payload", nil)
+			return
 		}
-		title_name = strings.ReplaceAll(strings.ToLower(title_name), " ", "_")
-
-		ext := filepath.Ext(handler.Filename)
-		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true}
-		if ext != "" && !allowed[ext] {
-			utils.JSONIndent(c, http.StatusBadRequest, "Unsupported file type", nil)
+		if err := json.Unmarshal([]byte(jsonStr), &input); err != nil {
+			utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
 			return
 		}
 
-		key := fmt.Sprintf("scholarship_logo/%s%s", title_name, ext)
+		// Handle optional photo upload
+		file, handler, err := c.Request.FormFile("photo")
+		if err == nil {
+			defer file.Close()
+			titleName := utils.SanitizeString(input.Title)
+			if titleName == "" {
+				titleName = utils.SanitizeString(existing.Title)
+			}
+			titleName = strings.ReplaceAll(strings.ToLower(titleName), " ", "_")
 
-		_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket: &storage.BucketName,
-			Key:    &key,
-			Body:   file,
-		})
-		if err != nil {
-			utils.JSONIndent(c, http.StatusInternalServerError, "Failed to upload photo", err.Error())
-			return
+			ext := filepath.Ext(handler.Filename)
+			allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true}
+			if ext != "" && !allowed[ext] {
+				utils.JSONIndent(c, http.StatusBadRequest, "Unsupported file type", nil)
+				return
+			}
+
+			key := fmt.Sprintf("scholarship_logo/%s%s", titleName, ext)
+			_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+				Bucket: &storage.BucketName,
+				Key:    &key,
+				Body:   file,
+			})
+			if err != nil {
+				utils.JSONIndent(c, http.StatusInternalServerError, "Failed to upload photo", err.Error())
+				return
+			}
+
+			input.PhotoURL = &key
 		}
-
-		photoKey = &key
 	}
 
-	// Prepare update parameters
+	// --- Handle plain JSON requests ---
+	if strings.HasPrefix(contentType, "application/json") {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+	}
+
+	// --- Prepare update parameters ---
 	updateParams := db.UpdateScholarshipParams{
 		ID:              int32(id),
 		Title:           utils.GetStringOrDefault(input.Title, existing.Title),
@@ -291,24 +299,18 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 		Requirements:    utils.GetNullRawMessageOrExisting(input.Requirements, existing.Requirements),
 		ExtraNotes:      utils.GetNullStringOrExisting(input.ExtraNotes, existing.ExtraNotes),
 		OfficialLink:    utils.GetNullStringOrExisting(input.OfficialLink, existing.OfficialLink),
+		DeadlineEnd:     utils.ParseDeadlineEnd(input.DeadlineEnd, existing.DeadlineEnd),
+		PhotoUrl:        existing.PhotoUrl, // will update later if input.PhotoURL != nil
 	}
 
-	// Handle deadline
-	if input.DeadlineEnd != nil {
-		updateParams.DeadlineEnd = utils.ToNullTime(input.DeadlineEnd.Format("2006-01-02T15:04:05Z07:00"))
-	} else {
-		updateParams.DeadlineEnd = existing.DeadlineEnd
-	}
-
-	// Handle photo URL
-	if photoKey != nil {
-		updateParams.PhotoUrl = utils.ToNullString(photoKey)
-	} else if input.PhotoURL != nil {
+	// --- Handle photo ---
+	if input.PhotoURL != nil {
 		updateParams.PhotoUrl = utils.ToNullString(input.PhotoURL)
 	} else {
 		updateParams.PhotoUrl = existing.PhotoUrl
 	}
 
+	// --- Execute update ---
 	scholarship, err := ctrl.Queries.UpdateScholarship(c, updateParams)
 	if err != nil {
 		logging.Error("Failed to update scholarship: ", err)
@@ -316,57 +318,18 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 		return
 	}
 
-	utils.JSONIndent(c, http.StatusOK, "Scholarship updated successfully", scholarship)
-}
+	// --- Build response using scholarship model ---
+	response := builder.MapScholarshipFromDBScholarship(scholarship)
 
-// UpdateScholarshipJSONB godoc
-// @Summary Update specific JSONB fields of a scholarship
-// @Tags Scholarships
-// @Accept json
-// @Produce json
-// @Param id path int true "Scholarship ID"
-// @Param body body models.UpdateJSONBRequest true "Update JSONB fields"
-// @Success 200 {object} utils.Response{data=models.Scholarship} "JSONB fields updated successfully"
-// @Router /scholarships/{id}/jsonb [patch]
-func (ctrl *ScholarshipController) UpdateScholarshipJSONB(c *gin.Context) {
-	id, err := utils.GetIDParam(c, "id")
-	if err != nil || id <= 0 {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid scholarship ID", nil)
-		return
+	// Generate presigned URL if PhotoUrl is present
+	if scholarship.PhotoUrl.Valid && scholarship.PhotoUrl.String != "" {
+		url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, scholarship.PhotoUrl.String, storage.S3Client)
+		if err != nil {
+			logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
+			response.PhotoURL = nil // or keep original key
+		} else {
+			response.PhotoURL = &url
+		}
 	}
-
-	var input models.UpdateJSONBRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
-		return
-	}
-
-	// Check if scholarship exists
-	_, err = ctrl.Queries.GetScholarshipByID(c, int32(id))
-	if err != nil {
-		utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
-		return
-	}
-
-	// Update specific JSONB fields
-	params := db.UpdateScholarshipJSONBParams{
-		ID: int32(id),
-	}
-
-	if input.InstitutionInfo != nil {
-		params.InstitutionInfo = utils.ToNullRawMessage(input.InstitutionInfo)
-	}
-
-	if input.Requirements != nil {
-		params.Requirements = utils.ToNullRawMessage(input.Requirements)
-	}
-
-	scholarship, err := ctrl.Queries.UpdateScholarshipJSONB(c, params)
-	if err != nil {
-		logging.Error("Failed to update scholarship JSONB: ", err)
-		utils.JSONIndent(c, http.StatusInternalServerError, "Internal Server Error", nil)
-		return
-	}
-
-	utils.JSONIndent(c, http.StatusOK, "JSONB fields updated successfully", scholarship)
+	utils.JSONIndent(c, http.StatusOK, "Scholarship updated successfully", response)
 }

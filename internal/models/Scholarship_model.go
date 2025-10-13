@@ -2,8 +2,17 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
+
+type DateOnly time.Time
+
+func (d DateOnly) MarshalJSON() ([]byte, error) {
+	t := time.Time(d)
+	formatted := fmt.Sprintf("\"%s\"", t.UTC().Format("2006-01-02"))
+	return []byte(formatted), nil
+}
 
 type CreateScholarshipRequest struct {
 	Title           string          `form:"title" json:"title"`
@@ -25,10 +34,11 @@ type ScholarshipResponse struct {
 	InstitutionInfo json.RawMessage `json:"institution_info,omitempty"`
 	Requirements    json.RawMessage `json:"requirements,omitempty"`
 	ExtraNotes      string          `json:"extra_notes,omitempty"`
-	DeadlineEnd     *time.Time      `json:"deadline_end,omitempty"`
 	OfficialLink    *string         `json:"official_link,omitempty"`
+	DeadlineEnd     *DateOnly       `json:"deadline_end,omitempty"`
 	PhotoURL        *string         `json:"photo_url,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
+	CreatedAt       DateOnly        `json:"created_at"`
+	UpdatedAt       *DateOnly       `json:"updated_at,omitempty"`
 }
 
 // Add these to your models package
@@ -39,12 +49,7 @@ type UpdateScholarshipRequest struct {
 	InstitutionInfo json.RawMessage `json:"institution_info,omitempty"`
 	Requirements    json.RawMessage `json:"requirements,omitempty"`
 	ExtraNotes      *string         `json:"extra_notes,omitempty"`
-	DeadlineEnd     *time.Time      `json:"deadline_end,omitempty"`
 	OfficialLink    *string         `json:"official_link,omitempty"`
 	PhotoURL        *string         `json:"photo_url,omitempty"`
-}
-
-type UpdateJSONBRequest struct {
-	InstitutionInfo json.RawMessage `json:"institution_info,omitempty"`
-	Requirements    json.RawMessage `json:"requirements,omitempty"`
+	DeadlineEnd     *string         `json:"deadline_end,omitempty"`
 }

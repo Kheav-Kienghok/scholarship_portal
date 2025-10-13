@@ -12,6 +12,9 @@ import (
 
 // SetupRoutes configures all the application routes
 func SetupRoutes(router *gin.Engine, db *database.Database) {
+    // Add Recovery middleware first (catches panics and recovers)
+    router.Use(gin.Recovery())
+
 	router.GET("/favicon.ico", func(c *gin.Context) {
 		c.Status(204)
 	})

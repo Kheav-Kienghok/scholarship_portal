@@ -41,14 +41,20 @@ func MapScholarship(row db.GetAllScholarshipsRow) models.ScholarshipResponse {
 		InstitutionInfo: institutionInfo,
 		Requirements:    requirements,
 		ExtraNotes:      extraNotes,
-		DeadlineEnd:     deadline,
+		DeadlineEnd: func() *models.DateOnly {
+			if deadline != nil {
+				d := models.DateOnly(*deadline)
+				return &d
+			}
+			return nil
+		}(),
 		OfficialLink:    utils.NullStringToPtr(row.OfficialLink),
 		PhotoURL:        utils.NullStringToPtr(row.PhotoUrl),
-		CreatedAt: func() time.Time {
+		CreatedAt: func() models.DateOnly {
 			if createdAt != nil {
-				return *createdAt
+				return models.DateOnly(*createdAt)
 			}
-			return time.Time{}
+			return models.DateOnly(time.Time{})
 		}(),
 	}
 }
@@ -70,9 +76,16 @@ func BuildScholarshipResponses(
 			InstitutionInfo: utils.NullRawMessageToJSON(s.InstitutionInfo),
 			Requirements:    utils.NullRawMessageToJSON(s.Requirements),
 			ExtraNotes:      utils.NullStringToString(s.ExtraNotes),
-			DeadlineEnd:     utils.NullTimeToPtr(s.DeadlineEnd),
+			DeadlineEnd: func() *models.DateOnly {
+				t := utils.NullTimeToPtr(s.DeadlineEnd)
+				if t != nil {
+					d := models.DateOnly(*t)
+					return &d
+				}
+				return nil
+			}(),
 			OfficialLink:    utils.NullStringToPtr(s.OfficialLink),
-			CreatedAt:       *utils.NullTimeToPtr(s.CreatedAt),
+			CreatedAt:       models.DateOnly(*utils.NullTimeToPtr(s.CreatedAt)),
 		}
 
 		// Generate presigned URL if PhotoUrl exists
@@ -85,4 +98,57 @@ func BuildScholarshipResponses(
 	}
 
 	return responses
+}
+
+func MapScholarshipFromDBScholarship(s db.Scholarship) models.ScholarshipResponse {
+	response := models.ScholarshipResponse{
+		ID:        int(s.ID),
+		Title:     s.Title,
+		Provider:  s.Provider,
+		CreatedAt: models.DateOnly(s.CreatedAt.Time),
+		UpdatedAt: func() *models.DateOnly {
+			d := models.DateOnly(s.UpdatedAt.Time)
+			return &d
+		}(),
+	}
+
+	// Handle nullable fields
+	if s.Description.Valid {
+		response.Description = s.Description.String
+	}
+
+	if s.ExtraNotes.Valid {
+		response.ExtraNotes = s.ExtraNotes.String
+	}
+
+	if s.OfficialLink.Valid {
+		response.OfficialLink = &s.OfficialLink.String
+	}
+
+	if s.DeadlineEnd.Valid {
+		utcDeadline := s.DeadlineEnd.Time.UTC()
+		d := models.DateOnly(utcDeadline)
+		response.DeadlineEnd = &d
+	}
+
+	// Handle JSONB fields (institution_info)
+	if s.InstitutionInfo.Valid {
+		var institutionInfo json.RawMessage
+		if err := json.Unmarshal(s.InstitutionInfo.RawMessage, &institutionInfo); err == nil {
+			response.InstitutionInfo = institutionInfo
+		}
+	}
+
+	// Handle JSONB fields (requirements)
+	if s.Requirements.Valid {
+		var requirements json.RawMessage
+		if err := json.Unmarshal(s.Requirements.RawMessage, &requirements); err == nil {
+			response.Requirements = requirements
+		}
+	}
+
+	// PhotoURL will be set by the caller after generating presigned URL
+	response.PhotoURL = nil
+
+	return response
 }

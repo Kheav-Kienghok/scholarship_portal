@@ -20,8 +20,7 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 		admin.POST("", scholarshipController.CreateScholarship)
 		admin.DELETE("/:id", scholarshipController.DeleteScholarship)
 
-		admin.PUT("/:id", scholarshipController.UpdateScholarship)
-		admin.PATCH("/:id/jsonb", scholarshipController.UpdateScholarshipJSONB)
+		admin.PATCH("/:id", scholarshipController.UpdateScholarship)
 
 		// admin.GET("/:id", scholarshipController.GetScholarshipByID)
 		// admin.PUT("/:id", scholarshipController.UpdateScholarship)
