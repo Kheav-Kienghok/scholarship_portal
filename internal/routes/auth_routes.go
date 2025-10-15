@@ -14,11 +14,11 @@ func RegisterAuthRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 	loginController := controllers.LoginControllerHandler(queries)
 	registerController := controllers.RegisterControllerHandler(queries)
 	googleHandler := auth.NewGoogleAuthHandler(queries)
-	facebookHandler := auth.NewFBAuthHandler(queries)
+	// facebookHandler := auth.NewFBAuthHandler(queries)
 
-	// Facebook OAuth
-	api.GET("/auth/facebook/login", facebookHandler.LoginHandler)
-	api.GET("/auth/facebook/callback", facebookHandler.CallbackHandler)
+	// // Facebook OAuth
+	// api.GET("/auth/facebook/login", facebookHandler.LoginHandler)
+	// api.GET("/auth/facebook/callback", facebookHandler.CallbackHandler)
 
 	// Google OAuth
 	api.GET("/auth/google/login", googleHandler.GoogleLogin)

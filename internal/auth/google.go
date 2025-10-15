@@ -104,7 +104,7 @@ func (h *GoogleAuthHandler) GoogleCallback(c *gin.Context) {
 		// Create user if not exists
 		_, err = h.Queries.CreateUser(c, db.CreateUserParams{
 			Email:        userInfo.Email,
-			Fullname:     sql.NullString{Valid: false},
+			Fullname:     sql.NullString{String: userInfo.Name, Valid: true},
 			PasswordHash: sql.NullString{Valid: false},
 		})
 		if err != nil {

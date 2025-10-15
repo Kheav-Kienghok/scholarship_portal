@@ -41,62 +41,66 @@ func ScholarshipControllerHandler(queries *db.Queries) *ScholarshipController {
 // @Success 201 {object} utils.Response{data=models.Scholarship} "Scholarship created successfully"
 // @Router /scholarships [post]
 func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
-
-	// Get JSON string from form field
-	jsonStr := c.PostForm("data")
-	if jsonStr == "" {
-		utils.JSONIndent(c, http.StatusBadRequest, "Missing JSON payload", nil)
-		return
-	}
-
 	var input models.CreateScholarshipRequest
-	if err := json.Unmarshal([]byte(jsonStr), &input); err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
-		return
+	var err error
+
+	contentType := c.Request.Header.Get("Content-Type")
+
+	if strings.HasPrefix(contentType, "application/json") {
+		// Handle raw JSON body
+		if err := c.ShouldBindJSON(&input); err != nil {
+			utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+	} else {
+		// Assume multipart/form-data
+		jsonStr := c.PostForm("data")
+		if jsonStr == "" {
+			utils.JSONIndent(c, http.StatusBadRequest, "Missing JSON payload", nil)
+			return
+		}
+
+		if err = json.Unmarshal([]byte(jsonStr), &input); err != nil {
+			utils.JSONIndent(c, http.StatusBadRequest, "Invalid JSON", err.Error())
+			return
+		}
+
+		// Handle file upload
+		file, handler, err := c.Request.FormFile("photo")
+		if err == nil {
+			defer file.Close()
+
+			ext := filepath.Ext(handler.Filename)
+			allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true}
+			if ext != "" && !allowed[ext] {
+				utils.JSONIndent(c, http.StatusBadRequest, "Unsupported file type", nil)
+				return
+			}
+
+			key := fmt.Sprintf("scholarship_logo/%s%s", strings.ToLower(strings.ReplaceAll(utils.SanitizeString(input.Title), " ", "_")), ext)
+
+			_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+				Bucket: &storage.BucketName,
+				Key:    &key,
+				Body:   file,
+			})
+			if err != nil {
+				utils.JSONIndent(c, http.StatusInternalServerError, "Failed to upload photo", err.Error())
+				return
+			}
+
+			input.PhotoURL = &key
+		}
 	}
 
+	// Sanitize title
 	title_name := utils.SanitizeString(input.Title)
 	if title_name == "" {
 		utils.JSONIndent(c, http.StatusBadRequest, "Title cannot be empty or whitespace", nil)
 		return
 	}
 
-	// replace spaces with underscores and optionally lowercase
-	title_name = strings.ReplaceAll(title_name, " ", "_")
-	title_name = strings.ToLower(title_name)
-
-	// Handle file upload
-	file, handler, err := c.Request.FormFile("photo")
-	if err == nil {
-		defer file.Close()
-
-		// Extract the extension (e.g. ".png", ".jpg")
-		ext := filepath.Ext(handler.Filename)
-
-		// validate extension to avoid weird uploads
-		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true}
-		if ext != "" && !allowed[ext] {
-			utils.JSONIndent(c, http.StatusBadRequest, "Unsupported file type", nil)
-			return
-		}
-
-		// Create a unique key for the file in S3
-		key := fmt.Sprintf("scholarship_logo/%s%s", title_name, ext)
-
-		_, err = storage.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket: &storage.BucketName,
-			Key:    &key,
-			Body:   file,
-		})
-		if err != nil {
-			utils.JSONIndent(c, http.StatusInternalServerError, "Failed to upload photo", err.Error())
-			return
-		}
-
-		// Store only the key in the database
-		input.PhotoURL = &key
-	}
-
+	// Save to DB
 	scholarship, err := ctrl.Queries.CreateScholarship(c, db.CreateScholarshipParams{
 		Title:           input.Title,
 		Provider:        input.Provider,
@@ -125,9 +129,6 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 // @Router /scholarships [get]
 func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 
-	// responses := utils.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
-	// utils.RespondOK(c, "Scholarships fetched", responses)
-
 	scholarships, err := ctrl.Queries.GetAllScholarships(c)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -139,7 +140,7 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch scholarships")
 		return
 	}
-	
+
 	var response []models.ScholarshipResponse
 	for _, s := range scholarships {
 		sr := builder.MapScholarship(s)

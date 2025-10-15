@@ -98,7 +98,7 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 
 	// 2FA enabled → issue temp token for OTP step
 	tempToken, _ := tokens.GenerateTempToken(admin.Email)
-	utils.RespondOK(c, "OTP required", gin.H{"temp_token": tempToken})
+	utils.RespondOK(c, "OTP required", gin.H{"temp_token": tempToken, "next": "/admin/verify-otp"})
 }
 
 func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {

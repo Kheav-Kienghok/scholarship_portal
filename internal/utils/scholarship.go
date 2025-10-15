@@ -3,7 +3,9 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sqlc-dev/pqtype"
 )
 
@@ -45,5 +47,29 @@ func GetNullRawMessageOrExisting(input interface{}, existing pqtype.NullRawMessa
 
 	default:
 		return existing
+	}
+}
+
+// JSONNoEscape sends a JSON response with HTML escaping disabled
+func JSONNoEscape(c *gin.Context, status int, message string, data interface{}) {
+	c.Header("Content-Type", "application/json; charset=utf-8")
+	c.Status(status)
+
+	response := gin.H{
+		"success": true,
+		"message": message,
+		"data":    data,
+	}
+
+	encoder := json.NewEncoder(c.Writer)
+	encoder.SetEscapeHTML(false) // disable & < > escaping
+	encoder.SetIndent("", "  ")  // optional: pretty print
+	if err := encoder.Encode(response); err != nil {
+		// fallback if encoding fails
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to encode response",
+			"data":    nil,
+		})
 	}
 }
