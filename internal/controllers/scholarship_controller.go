@@ -100,6 +100,16 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		return
 	}
 
+	if input.Provider == "" {
+		utils.JSONIndent(c, http.StatusBadRequest, "Provider is required", nil)
+		return
+	}
+
+	if input.DeadlineEnd == nil {
+		utils.JSONIndent(c, http.StatusBadRequest, "DeadlineEnd is required", nil)
+		return
+	}
+
 	// Save to DB
 	scholarship, err := ctrl.Queries.CreateScholarship(c, db.CreateScholarshipParams{
 		Title:           input.Title,
