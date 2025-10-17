@@ -14,7 +14,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
 SET fullname = COALESCE($1, fullname)
 WHERE id = $2
-RETURNING id, fullname, email, password_hash, created_at, updated_at
+RETURNING id, fullname, email, password_hash, created_at, updated_at, email_verified
 `
 
 type UpdateUserProfileParams struct {
@@ -32,6 +32,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EmailVerified,
 	)
 	return i, err
 }

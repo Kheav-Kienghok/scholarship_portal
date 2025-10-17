@@ -30,6 +30,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.adminUpdateUserTOTPSecretStmt, err = db.PrepareContext(ctx, adminUpdateUserTOTPSecret); err != nil {
 		return nil, fmt.Errorf("error preparing query AdminUpdateUserTOTPSecret: %w", err)
 	}
+	if q.cleanupExpiredVerificationsStmt, err = db.PrepareContext(ctx, cleanupExpiredVerifications); err != nil {
+		return nil, fmt.Errorf("error preparing query CleanupExpiredVerifications: %w", err)
+	}
+	if q.createEmailVerificationStmt, err = db.PrepareContext(ctx, createEmailVerification); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateEmailVerification: %w", err)
+	}
 	if q.createOAuthLoginStmt, err = db.PrepareContext(ctx, createOAuthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateOAuthLogin: %w", err)
 	}
@@ -44,6 +50,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.deleteEmailVerificationsByUserIDStmt, err = db.PrepareContext(ctx, deleteEmailVerificationsByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteEmailVerificationsByUserID: %w", err)
 	}
 	if q.deleteOAuthLoginStmt, err = db.PrepareContext(ctx, deleteOAuthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteOAuthLogin: %w", err)
@@ -68,6 +77,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getAllScholarshipsStmt, err = db.PrepareContext(ctx, getAllScholarships); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllScholarships: %w", err)
+	}
+	if q.getEmailVerificationByTokenStmt, err = db.PrepareContext(ctx, getEmailVerificationByToken); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEmailVerificationByToken: %w", err)
+	}
+	if q.getEmailVerificationByUserIDStmt, err = db.PrepareContext(ctx, getEmailVerificationByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEmailVerificationByUserID: %w", err)
 	}
 	if q.getOAuthLoginByProviderStmt, err = db.PrepareContext(ctx, getOAuthLoginByProvider); err != nil {
 		return nil, fmt.Errorf("error preparing query GetOAuthLoginByProvider: %w", err)
@@ -105,6 +120,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listFavoritesByUserStmt, err = db.PrepareContext(ctx, listFavoritesByUser); err != nil {
 		return nil, fmt.Errorf("error preparing query ListFavoritesByUser: %w", err)
 	}
+	if q.markEmailVerificationAsUsedStmt, err = db.PrepareContext(ctx, markEmailVerificationAsUsed); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkEmailVerificationAsUsed: %w", err)
+	}
 	if q.removeFavoriteStmt, err = db.PrepareContext(ctx, removeFavorite); err != nil {
 		return nil, fmt.Errorf("error preparing query RemoveFavorite: %w", err)
 	}
@@ -129,6 +147,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.upsertOauthLoginStmt, err = db.PrepareContext(ctx, upsertOauthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query UpsertOauthLogin: %w", err)
 	}
+	if q.verifyUserEmailStmt, err = db.PrepareContext(ctx, verifyUserEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query VerifyUserEmail: %w", err)
+	}
 	return &q, nil
 }
 
@@ -142,6 +163,16 @@ func (q *Queries) Close() error {
 	if q.adminUpdateUserTOTPSecretStmt != nil {
 		if cerr := q.adminUpdateUserTOTPSecretStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing adminUpdateUserTOTPSecretStmt: %w", cerr)
+		}
+	}
+	if q.cleanupExpiredVerificationsStmt != nil {
+		if cerr := q.cleanupExpiredVerificationsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing cleanupExpiredVerificationsStmt: %w", cerr)
+		}
+	}
+	if q.createEmailVerificationStmt != nil {
+		if cerr := q.createEmailVerificationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createEmailVerificationStmt: %w", cerr)
 		}
 	}
 	if q.createOAuthLoginStmt != nil {
@@ -167,6 +198,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.deleteEmailVerificationsByUserIDStmt != nil {
+		if cerr := q.deleteEmailVerificationsByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteEmailVerificationsByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteOAuthLoginStmt != nil {
@@ -207,6 +243,16 @@ func (q *Queries) Close() error {
 	if q.getAllScholarshipsStmt != nil {
 		if cerr := q.getAllScholarshipsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllScholarshipsStmt: %w", cerr)
+		}
+	}
+	if q.getEmailVerificationByTokenStmt != nil {
+		if cerr := q.getEmailVerificationByTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEmailVerificationByTokenStmt: %w", cerr)
+		}
+	}
+	if q.getEmailVerificationByUserIDStmt != nil {
+		if cerr := q.getEmailVerificationByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEmailVerificationByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.getOAuthLoginByProviderStmt != nil {
@@ -269,6 +315,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing listFavoritesByUserStmt: %w", cerr)
 		}
 	}
+	if q.markEmailVerificationAsUsedStmt != nil {
+		if cerr := q.markEmailVerificationAsUsedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markEmailVerificationAsUsedStmt: %w", cerr)
+		}
+	}
 	if q.removeFavoriteStmt != nil {
 		if cerr := q.removeFavoriteStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing removeFavoriteStmt: %w", cerr)
@@ -307,6 +358,11 @@ func (q *Queries) Close() error {
 	if q.upsertOauthLoginStmt != nil {
 		if cerr := q.upsertOauthLoginStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing upsertOauthLoginStmt: %w", cerr)
+		}
+	}
+	if q.verifyUserEmailStmt != nil {
+		if cerr := q.verifyUserEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing verifyUserEmailStmt: %w", cerr)
 		}
 	}
 	return err
@@ -350,11 +406,14 @@ type Queries struct {
 	tx                                       *sql.Tx
 	addFavoriteStmt                          *sql.Stmt
 	adminUpdateUserTOTPSecretStmt            *sql.Stmt
+	cleanupExpiredVerificationsStmt          *sql.Stmt
+	createEmailVerificationStmt              *sql.Stmt
 	createOAuthLoginStmt                     *sql.Stmt
 	createScholarshipStmt                    *sql.Stmt
 	createScholarshipWithDetailsStmt         *sql.Stmt
 	createStudentProfileStmt                 *sql.Stmt
 	createUserStmt                           *sql.Stmt
+	deleteEmailVerificationsByUserIDStmt     *sql.Stmt
 	deleteOAuthLoginStmt                     *sql.Stmt
 	deleteScholarshipByIDStmt                *sql.Stmt
 	deleteStudentProfileStmt                 *sql.Stmt
@@ -363,6 +422,8 @@ type Queries struct {
 	getAdminByIDStmt                         *sql.Stmt
 	getAdminByIDOrEmailStmt                  *sql.Stmt
 	getAllScholarshipsStmt                   *sql.Stmt
+	getEmailVerificationByTokenStmt          *sql.Stmt
+	getEmailVerificationByUserIDStmt         *sql.Stmt
 	getOAuthLoginByProviderStmt              *sql.Stmt
 	getOAuthLoginsByUserIDStmt               *sql.Stmt
 	getScholarshipByIDStmt                   *sql.Stmt
@@ -375,6 +436,7 @@ type Queries struct {
 	getUserByOAuthProviderStmt               *sql.Stmt
 	getUserWithStudentProfileStmt            *sql.Stmt
 	listFavoritesByUserStmt                  *sql.Stmt
+	markEmailVerificationAsUsedStmt          *sql.Stmt
 	removeFavoriteStmt                       *sql.Stmt
 	searchScholarshipsStmt                   *sql.Stmt
 	updateOAuthLoginStmt                     *sql.Stmt
@@ -383,6 +445,7 @@ type Queries struct {
 	updateStudentProfileStmt                 *sql.Stmt
 	updateUserProfileStmt                    *sql.Stmt
 	upsertOauthLoginStmt                     *sql.Stmt
+	verifyUserEmailStmt                      *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -391,11 +454,14 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                                       tx,
 		addFavoriteStmt:                          q.addFavoriteStmt,
 		adminUpdateUserTOTPSecretStmt:            q.adminUpdateUserTOTPSecretStmt,
+		cleanupExpiredVerificationsStmt:          q.cleanupExpiredVerificationsStmt,
+		createEmailVerificationStmt:              q.createEmailVerificationStmt,
 		createOAuthLoginStmt:                     q.createOAuthLoginStmt,
 		createScholarshipStmt:                    q.createScholarshipStmt,
 		createScholarshipWithDetailsStmt:         q.createScholarshipWithDetailsStmt,
 		createStudentProfileStmt:                 q.createStudentProfileStmt,
 		createUserStmt:                           q.createUserStmt,
+		deleteEmailVerificationsByUserIDStmt:     q.deleteEmailVerificationsByUserIDStmt,
 		deleteOAuthLoginStmt:                     q.deleteOAuthLoginStmt,
 		deleteScholarshipByIDStmt:                q.deleteScholarshipByIDStmt,
 		deleteStudentProfileStmt:                 q.deleteStudentProfileStmt,
@@ -404,6 +470,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAdminByIDStmt:                         q.getAdminByIDStmt,
 		getAdminByIDOrEmailStmt:                  q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:                   q.getAllScholarshipsStmt,
+		getEmailVerificationByTokenStmt:          q.getEmailVerificationByTokenStmt,
+		getEmailVerificationByUserIDStmt:         q.getEmailVerificationByUserIDStmt,
 		getOAuthLoginByProviderStmt:              q.getOAuthLoginByProviderStmt,
 		getOAuthLoginsByUserIDStmt:               q.getOAuthLoginsByUserIDStmt,
 		getScholarshipByIDStmt:                   q.getScholarshipByIDStmt,
@@ -416,6 +484,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserByOAuthProviderStmt:               q.getUserByOAuthProviderStmt,
 		getUserWithStudentProfileStmt:            q.getUserWithStudentProfileStmt,
 		listFavoritesByUserStmt:                  q.listFavoritesByUserStmt,
+		markEmailVerificationAsUsedStmt:          q.markEmailVerificationAsUsedStmt,
 		removeFavoriteStmt:                       q.removeFavoriteStmt,
 		searchScholarshipsStmt:                   q.searchScholarshipsStmt,
 		updateOAuthLoginStmt:                     q.updateOAuthLoginStmt,
@@ -424,5 +493,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateStudentProfileStmt:                 q.updateStudentProfileStmt,
 		updateUserProfileStmt:                    q.updateUserProfileStmt,
 		upsertOauthLoginStmt:                     q.upsertOauthLoginStmt,
+		verifyUserEmailStmt:                      q.verifyUserEmailStmt,
 	}
 }

@@ -11,7 +11,13 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 	scholarshipController := controllers.ScholarshipControllerHandler(queries)
 
 	// Public
-	api.GET("/scholarships", scholarshipController.GetScholarships)
+	// api.GET("/scholarships", scholarshipController.GetScholarships)
+
+	scholarshipGroup := api.Group("/scholarships")
+	{
+		// Apply ETag middleware only to GET endpoints
+		scholarshipGroup.GET("", middlewares.ETagMiddleware(), scholarshipController.GetScholarships)
+	}
 
 	// Admin only
 	admin := api.Group("/scholarships")

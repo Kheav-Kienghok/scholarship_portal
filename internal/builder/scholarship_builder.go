@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -48,8 +49,8 @@ func MapScholarship(row db.GetAllScholarshipsRow) models.ScholarshipResponse {
 			}
 			return nil
 		}(),
-		OfficialLink:    utils.NullStringToPtr(row.OfficialLink),
-		PhotoURL:        utils.NullStringToPtr(row.PhotoUrl),
+		OfficialLink: utils.NullStringToPtr(row.OfficialLink),
+		PhotoURL:     utils.NullStringToPtr(row.PhotoUrl),
 		CreatedAt: func() models.DateOnly {
 			if createdAt != nil {
 				return models.DateOnly(*createdAt)
@@ -84,14 +85,16 @@ func BuildScholarshipResponses(
 				}
 				return nil
 			}(),
-			OfficialLink:    utils.NullStringToPtr(s.OfficialLink),
-			CreatedAt:       models.DateOnly(*utils.NullTimeToPtr(s.CreatedAt)),
+			OfficialLink: utils.NullStringToPtr(s.OfficialLink),
+			CreatedAt:    models.DateOnly(*utils.NullTimeToPtr(s.CreatedAt)),
 		}
 
-		// Generate presigned URL if PhotoUrl exists
+		// Generate presigned URL if PhotoUrl exists (will use cache automatically)
 		if s.PhotoUrl.Valid && s.PhotoUrl.String != "" {
 			if url, err := utils.GenerateScholarshipLogoURL(bucketName, s.PhotoUrl.String, s3Client); err == nil {
 				sr.PhotoURL = &url
+			} else {
+				logging.Error("Failed to generate presigned URL for scholarship", s.ID, ":", err)
 			}
 		}
 		responses[i] = sr

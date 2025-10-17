@@ -44,6 +44,11 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 		return
 	}
 
+	if !user.EmailVerified.Bool {
+		utils.JSONIndent(c, http.StatusUnauthorized, "Please verify your email before logging in", nil)
+		return
+	}
+
 	// Compare hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(input.Password)); err != nil {
 		logging.Error("Password mismatch:", err)

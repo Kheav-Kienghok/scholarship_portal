@@ -1,9 +1,14 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
@@ -22,6 +27,15 @@ func RegisterControllerHandler(queries *db.Queries) *RegisterController {
 	return &RegisterController{
 		Queries: queries,
 	}
+}
+
+// generateVerificationToken creates a random verification token
+func generateVerificationToken() (string, error) {
+	bytes := make([]byte, 128)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // Register godoc
@@ -72,18 +86,113 @@ func (r *RegisterController) Register(c *gin.Context) {
 		return
 	}
 
+	// Create user (initially unverified)
 	params := db.CreateUserParams{
-		Fullname:     sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
-		Email:        strings.ToLower(input.Email),
-		PasswordHash: sql.NullString{String: string(hashedPassword), Valid: true},
+		Fullname:      sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
+		Email:         strings.ToLower(input.Email),
+		PasswordHash:  sql.NullString{String: string(hashedPassword), Valid: true},
+		EmailVerified: sql.NullBool{Bool: false, Valid: true}, // Set to false initially
 	}
 
-	_, err = r.Queries.CreateUser(c, params)
+	user, err := r.Queries.CreateUser(c, params)
 	if err != nil {
 		logging.Error("DB: Failed to create user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
-	utils.JSONIndent(c, http.StatusCreated, "Registration successful", nil)
+	// Generate verification token
+	token, err := generateVerificationToken()
+	if err != nil {
+		logging.Error("Failed to generate verification token:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Save verification token to database
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	_, err = r.Queries.CreateEmailVerification(c, db.CreateEmailVerificationParams{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		logging.Error("Failed to save verification token:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Generate verification link
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://eduvision.live"
+	}
+	verificationLink := fmt.Sprintf("%s/api/v1/auth/verify-email?token=%s", baseURL, token)
+
+	// Return success with verification link
+	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", gin.H{
+		"verification": gin.H{
+			"required": true,
+			"link":     verificationLink,
+			"expires":  "24h",
+		},
+	})
+}
+
+// VerifyEmail godoc
+// @Summary Verify user email
+// @Description Verify user email using the token sent via email
+// @Tags Authentication
+// @Produce json
+// @Param token query string true "Verification token"
+// @Success 200 {object} utils.APIResponse "Email verified successfully"
+// @Router /auth/verify-email [get]
+func (r *RegisterController) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		utils.JSONIndent(c, http.StatusBadRequest, "Verification token is required", nil)
+		return
+	}
+
+	// Get verification record
+	verification, err := r.Queries.GetEmailVerificationByToken(c, token)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.JSONIndent(c, http.StatusBadRequest, "Invalid or expired verification token", nil)
+			return
+		}
+		logging.Error("Failed to get verification token:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Check if token is expired
+	if time.Now().After(verification.ExpiresAt) {
+		utils.JSONIndent(c, http.StatusBadRequest, "Verification token has expired", nil)
+		return
+	}
+
+	// Check if already verified
+	if verification.VerifiedAt.Valid {
+		utils.JSONIndent(c, http.StatusBadRequest, "Email is already verified", nil)
+		return
+	}
+
+	// Verify the user
+	err = r.Queries.VerifyUserEmail(c, verification.UserID)
+	if err != nil {
+		logging.Error("Failed to verify user email:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Mark verification as completed
+	err = r.Queries.MarkEmailVerificationAsUsed(c, verification.ID)
+	if err != nil {
+		logging.Error("Failed to mark verification as used:", err)
+		// Don't fail the verification, just log
+	}
+
+	utils.JSONIndent(c, http.StatusOK, "Email verified successfully! You can now log in.", nil)
 }

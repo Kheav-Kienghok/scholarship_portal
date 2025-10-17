@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/cache"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/server"
@@ -42,6 +43,9 @@ func main() {
 	if err := logging.InitLogger(); err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
+
+	// Initialize cache
+	cache.InitCache()
 
 	// Get DB connection string
 	connStr := os.Getenv("DATABASE_URL")

@@ -14,17 +14,19 @@ func RegisterAuthRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 	loginController := controllers.LoginControllerHandler(queries)
 	registerController := controllers.RegisterControllerHandler(queries)
 	googleHandler := auth.NewGoogleAuthHandler(queries)
-	// facebookHandler := auth.NewFBAuthHandler(queries)
 
-	// // Facebook OAuth
-	// api.GET("/auth/facebook/login", facebookHandler.LoginHandler)
-	// api.GET("/auth/facebook/callback", facebookHandler.CallbackHandler)
+    // Create auth sub-group
+    authGroup := api.Group("/auth")
+    {
+        // Google OAuth
+        authGroup.GET("/google/login", googleHandler.GoogleLogin)
+        authGroup.GET("/google/callback", googleHandler.GoogleCallback)
 
-	// Google OAuth
-	api.GET("/auth/google/login", googleHandler.GoogleLogin)
-	api.GET("/auth/google/callback", googleHandler.GoogleCallback)
+        // Email verification (under /auth)
+        authGroup.GET("/verify-email", registerController.VerifyEmail)
+    }
 
-	// Register + Login
-	api.POST("/register", registerController.Register)
-	api.POST("/login", loginController.Login)
+    // Register + Login (directly under /api/v1)
+    api.POST("/register", registerController.Register)
+    api.POST("/login", loginController.Login)
 }

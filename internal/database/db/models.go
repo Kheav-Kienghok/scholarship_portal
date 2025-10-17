@@ -6,6 +6,7 @@ package db
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/sqlc-dev/pqtype"
 )
@@ -19,6 +20,16 @@ type Admin struct {
 	IsTwoFactor  bool           `json:"is_two_factor"`
 	CreatedAt    sql.NullTime   `json:"created_at"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
+}
+
+type EmailVerification struct {
+	ID         int32        `json:"id"`
+	UserID     int32        `json:"user_id"`
+	Token      string       `json:"token"`
+	ExpiresAt  time.Time    `json:"expires_at"`
+	VerifiedAt sql.NullTime `json:"verified_at"`
+	CreatedAt  sql.NullTime `json:"created_at"`
+	UpdatedAt  sql.NullTime `json:"updated_at"`
 }
 
 type FavoriteScholarship struct {
@@ -67,10 +78,11 @@ type StudentProfile struct {
 }
 
 type User struct {
-	ID           int32          `json:"id"`
-	Fullname     sql.NullString `json:"fullname"`
-	Email        string         `json:"email"`
-	PasswordHash sql.NullString `json:"password_hash"`
-	CreatedAt    sql.NullTime   `json:"created_at"`
-	UpdatedAt    sql.NullTime   `json:"updated_at"`
+	ID            int32          `json:"id"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	PasswordHash  sql.NullString `json:"password_hash"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
 }

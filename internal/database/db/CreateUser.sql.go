@@ -14,32 +14,41 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     fullname, 
     email,
-    password_hash
-) VALUES ($1, $2, $3)
-RETURNING id, fullname, email, created_at, updated_at
+    password_hash,
+    email_verified
+) VALUES ($1, $2, $3, $4)
+RETURNING id, fullname, email, email_verified, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Fullname     sql.NullString `json:"fullname"`
-	Email        string         `json:"email"`
-	PasswordHash sql.NullString `json:"password_hash"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	PasswordHash  sql.NullString `json:"password_hash"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
 }
 
 type CreateUserRow struct {
-	ID        int32          `json:"id"`
-	Fullname  sql.NullString `json:"fullname"`
-	Email     string         `json:"email"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
+	ID            int32          `json:"id"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.Fullname, arg.Email, arg.PasswordHash)
+	row := q.queryRow(ctx, q.createUserStmt, createUser,
+		arg.Fullname,
+		arg.Email,
+		arg.PasswordHash,
+		arg.EmailVerified,
+	)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -47,19 +56,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fullname, email, password_hash, created_at, updated_at
+SELECT id, fullname, email, password_hash, email_verified, created_at, updated_at
 FROM users 
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID            int32          `json:"id"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	PasswordHash  sql.NullString `json:"password_hash"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.queryRow(ctx, q.getUserByEmailStmt, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -67,19 +87,30 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fullname, email, password_hash, created_at, updated_at
+SELECT id, fullname, email, password_hash, email_verified, created_at, updated_at
 FROM users 
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
+type GetUserByIDRow struct {
+	ID            int32          `json:"id"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	PasswordHash  sql.NullString `json:"password_hash"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id int32) (GetUserByIDRow, error) {
 	row := q.queryRow(ctx, q.getUserByIDStmt, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -92,6 +123,7 @@ SELECT
     fullname,
     email,
     password_hash,
+    email_verified,
     created_at,
     updated_at
 FROM users
@@ -103,16 +135,38 @@ type GetUserByIDOrEmailParams struct {
 	Column2 string `json:"column_2"`
 }
 
-func (q *Queries) GetUserByIDOrEmail(ctx context.Context, arg GetUserByIDOrEmailParams) (User, error) {
+type GetUserByIDOrEmailRow struct {
+	ID            int32          `json:"id"`
+	Fullname      sql.NullString `json:"fullname"`
+	Email         string         `json:"email"`
+	PasswordHash  sql.NullString `json:"password_hash"`
+	EmailVerified sql.NullBool   `json:"email_verified"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetUserByIDOrEmail(ctx context.Context, arg GetUserByIDOrEmailParams) (GetUserByIDOrEmailRow, error) {
 	row := q.queryRow(ctx, q.getUserByIDOrEmailStmt, getUserByIDOrEmail, arg.Column1, arg.Column2)
-	var i User
+	var i GetUserByIDOrEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Fullname,
 		&i.Email,
 		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const verifyUserEmail = `-- name: VerifyUserEmail :exec
+UPDATE users
+SET email_verified = true, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) VerifyUserEmail(ctx context.Context, id int32) error {
+	_, err := q.exec(ctx, q.verifyUserEmailStmt, verifyUserEmail, id)
+	return err
 }

@@ -70,7 +70,7 @@ func (q *Queries) DeleteOAuthLogin(ctx context.Context, arg DeleteOAuthLoginPara
 }
 
 const getOAuthLoginByProvider = `-- name: GetOAuthLoginByProvider :one
-SELECT ol.id, ol.user_id, ol.provider, ol.provider_user_id, ol.access_token, ol.refresh_token, ol.created_at, ol.updated_at, u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at FROM oauth_logins ol
+SELECT ol.id, ol.user_id, ol.provider, ol.provider_user_id, ol.access_token, ol.refresh_token, ol.created_at, ol.updated_at, u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at, u.email_verified FROM oauth_logins ol
 JOIN users u ON ol.user_id = u.id
 WHERE ol.provider = $1 AND ol.provider_user_id = $2
 LIMIT 1
@@ -96,6 +96,7 @@ type GetOAuthLoginByProviderRow struct {
 	PasswordHash   sql.NullString `json:"password_hash"`
 	CreatedAt_2    sql.NullTime   `json:"created_at_2"`
 	UpdatedAt_2    sql.NullTime   `json:"updated_at_2"`
+	EmailVerified  sql.NullBool   `json:"email_verified"`
 }
 
 func (q *Queries) GetOAuthLoginByProvider(ctx context.Context, arg GetOAuthLoginByProviderParams) (GetOAuthLoginByProviderRow, error) {
@@ -116,6 +117,7 @@ func (q *Queries) GetOAuthLoginByProvider(ctx context.Context, arg GetOAuthLogin
 		&i.PasswordHash,
 		&i.CreatedAt_2,
 		&i.UpdatedAt_2,
+		&i.EmailVerified,
 	)
 	return i, err
 }
@@ -159,7 +161,7 @@ func (q *Queries) GetOAuthLoginsByUserID(ctx context.Context, userID sql.NullInt
 }
 
 const getUserByOAuthProvider = `-- name: GetUserByOAuthProvider :one
-SELECT u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.fullname, u.email, u.password_hash, u.created_at, u.updated_at, u.email_verified FROM users u
 JOIN oauth_logins ol ON u.id = ol.user_id
 WHERE ol.provider = $1 AND ol.provider_user_id = $2
 LIMIT 1
@@ -180,6 +182,7 @@ func (q *Queries) GetUserByOAuthProvider(ctx context.Context, arg GetUserByOAuth
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EmailVerified,
 	)
 	return i, err
 }
