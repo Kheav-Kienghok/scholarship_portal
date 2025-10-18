@@ -151,25 +151,30 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 		return
 	}
 
-	var response []models.ScholarshipResponse
-	for _, s := range scholarships {
-		sr := builder.MapScholarship(s)
-
-		// Generate presigned URL if PhotoUrl is present
-		if s.PhotoUrl.Valid && s.PhotoUrl.String != "" {
-			url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, s.PhotoUrl.String, storage.S3Client)
-			if err != nil {
-				logging.Error("Failed to generate presigned URL for scholarship ", s.ID, ": ", err)
-				sr.PhotoURL = nil // or keep original key
-			} else {
-				sr.PhotoURL = &url
-			}
-		}
-
-		response = append(response, sr)
-	}
-
+	response := builder.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
 	utils.JSONIndent(c, http.StatusOK, "List of scholarships", response)
+}
+
+// GetActiveScholarships godoc
+// @Summary Get active scholarships (deadline not passed)
+// @Description Returns scholarships where deadline_end is greater than current date
+// @Tags Scholarships
+// @Produce json
+// @Success 200 {object} utils.Response{data=[]models.Scholarship} "List of active scholarships"
+// @Router /scholarships/active [get]
+func (ctrl *ScholarshipController) GetActiveScholarship(c *gin.Context) {
+	scholarships, err := ctrl.Queries.GetActiveScholarships(c)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.JSONIndent(c, http.StatusOK, "No active scholarships found", []models.ScholarshipResponse{})
+			return
+		}
+		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch active scholarships")
+		return
+	}
+	// Use the interface-based builder for active scholarships
+	response := builder.BuildActiveScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	utils.JSONIndent(c, http.StatusOK, "List of active scholarships", response)
 }
 
 func (ctrl *ScholarshipController) SearchScholarships(c *gin.Context) {
@@ -198,9 +203,7 @@ func (ctrl *ScholarshipController) SearchScholarships(c *gin.Context) {
 		return
 	}
 
-	// Use the correct builder for db.Scholarship
-	response := builder.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
-
+	response := builder.BuildScholarshipResponsesFromDB(scholarships, storage.S3Client, storage.BucketName)
 	utils.JSONIndent(c, http.StatusOK, "Search results", response)
 }
 

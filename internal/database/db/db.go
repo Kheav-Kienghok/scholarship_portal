@@ -54,6 +54,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteEmailVerificationsByUserIDStmt, err = db.PrepareContext(ctx, deleteEmailVerificationsByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEmailVerificationsByUserID: %w", err)
 	}
+	if q.deleteExpiredVerificationsStmt, err = db.PrepareContext(ctx, deleteExpiredVerifications); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredVerifications: %w", err)
+	}
 	if q.deleteOAuthLoginStmt, err = db.PrepareContext(ctx, deleteOAuthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteOAuthLogin: %w", err)
 	}
@@ -65,6 +68,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.enableAdmin2FAStmt, err = db.PrepareContext(ctx, enableAdmin2FA); err != nil {
 		return nil, fmt.Errorf("error preparing query EnableAdmin2FA: %w", err)
+	}
+	if q.getActiveScholarshipsStmt, err = db.PrepareContext(ctx, getActiveScholarships); err != nil {
+		return nil, fmt.Errorf("error preparing query GetActiveScholarships: %w", err)
 	}
 	if q.getAdminByEmailStmt, err = db.PrepareContext(ctx, getAdminByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAdminByEmail: %w", err)
@@ -84,6 +90,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEmailVerificationByUserIDStmt, err = db.PrepareContext(ctx, getEmailVerificationByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEmailVerificationByUserID: %w", err)
 	}
+	if q.getLatestVerificationByEmailStmt, err = db.PrepareContext(ctx, getLatestVerificationByEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetLatestVerificationByEmail: %w", err)
+	}
 	if q.getOAuthLoginByProviderStmt, err = db.PrepareContext(ctx, getOAuthLoginByProvider); err != nil {
 		return nil, fmt.Errorf("error preparing query GetOAuthLoginByProvider: %w", err)
 	}
@@ -101,6 +110,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getStudentProfileStmt, err = db.PrepareContext(ctx, getStudentProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStudentProfile: %w", err)
+	}
+	if q.getUnverifiedUserByEmailStmt, err = db.PrepareContext(ctx, getUnverifiedUserByEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUnverifiedUserByEmail: %w", err)
 	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
@@ -205,6 +217,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteEmailVerificationsByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.deleteExpiredVerificationsStmt != nil {
+		if cerr := q.deleteExpiredVerificationsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredVerificationsStmt: %w", cerr)
+		}
+	}
 	if q.deleteOAuthLoginStmt != nil {
 		if cerr := q.deleteOAuthLoginStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteOAuthLoginStmt: %w", cerr)
@@ -223,6 +240,11 @@ func (q *Queries) Close() error {
 	if q.enableAdmin2FAStmt != nil {
 		if cerr := q.enableAdmin2FAStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing enableAdmin2FAStmt: %w", cerr)
+		}
+	}
+	if q.getActiveScholarshipsStmt != nil {
+		if cerr := q.getActiveScholarshipsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getActiveScholarshipsStmt: %w", cerr)
 		}
 	}
 	if q.getAdminByEmailStmt != nil {
@@ -255,6 +277,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getEmailVerificationByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getLatestVerificationByEmailStmt != nil {
+		if cerr := q.getLatestVerificationByEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getLatestVerificationByEmailStmt: %w", cerr)
+		}
+	}
 	if q.getOAuthLoginByProviderStmt != nil {
 		if cerr := q.getOAuthLoginByProviderStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getOAuthLoginByProviderStmt: %w", cerr)
@@ -283,6 +310,11 @@ func (q *Queries) Close() error {
 	if q.getStudentProfileStmt != nil {
 		if cerr := q.getStudentProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getStudentProfileStmt: %w", cerr)
+		}
+	}
+	if q.getUnverifiedUserByEmailStmt != nil {
+		if cerr := q.getUnverifiedUserByEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUnverifiedUserByEmailStmt: %w", cerr)
 		}
 	}
 	if q.getUserByEmailStmt != nil {
@@ -414,22 +446,26 @@ type Queries struct {
 	createStudentProfileStmt                 *sql.Stmt
 	createUserStmt                           *sql.Stmt
 	deleteEmailVerificationsByUserIDStmt     *sql.Stmt
+	deleteExpiredVerificationsStmt           *sql.Stmt
 	deleteOAuthLoginStmt                     *sql.Stmt
 	deleteScholarshipByIDStmt                *sql.Stmt
 	deleteStudentProfileStmt                 *sql.Stmt
 	enableAdmin2FAStmt                       *sql.Stmt
+	getActiveScholarshipsStmt                *sql.Stmt
 	getAdminByEmailStmt                      *sql.Stmt
 	getAdminByIDStmt                         *sql.Stmt
 	getAdminByIDOrEmailStmt                  *sql.Stmt
 	getAllScholarshipsStmt                   *sql.Stmt
 	getEmailVerificationByTokenStmt          *sql.Stmt
 	getEmailVerificationByUserIDStmt         *sql.Stmt
+	getLatestVerificationByEmailStmt         *sql.Stmt
 	getOAuthLoginByProviderStmt              *sql.Stmt
 	getOAuthLoginsByUserIDStmt               *sql.Stmt
 	getScholarshipByIDStmt                   *sql.Stmt
 	getScholarshipsByIDsStmt                 *sql.Stmt
 	getScholarshipsByInstitutionCodeLikeStmt *sql.Stmt
 	getStudentProfileStmt                    *sql.Stmt
+	getUnverifiedUserByEmailStmt             *sql.Stmt
 	getUserByEmailStmt                       *sql.Stmt
 	getUserByIDStmt                          *sql.Stmt
 	getUserByIDOrEmailStmt                   *sql.Stmt
@@ -462,22 +498,26 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createStudentProfileStmt:                 q.createStudentProfileStmt,
 		createUserStmt:                           q.createUserStmt,
 		deleteEmailVerificationsByUserIDStmt:     q.deleteEmailVerificationsByUserIDStmt,
+		deleteExpiredVerificationsStmt:           q.deleteExpiredVerificationsStmt,
 		deleteOAuthLoginStmt:                     q.deleteOAuthLoginStmt,
 		deleteScholarshipByIDStmt:                q.deleteScholarshipByIDStmt,
 		deleteStudentProfileStmt:                 q.deleteStudentProfileStmt,
 		enableAdmin2FAStmt:                       q.enableAdmin2FAStmt,
+		getActiveScholarshipsStmt:                q.getActiveScholarshipsStmt,
 		getAdminByEmailStmt:                      q.getAdminByEmailStmt,
 		getAdminByIDStmt:                         q.getAdminByIDStmt,
 		getAdminByIDOrEmailStmt:                  q.getAdminByIDOrEmailStmt,
 		getAllScholarshipsStmt:                   q.getAllScholarshipsStmt,
 		getEmailVerificationByTokenStmt:          q.getEmailVerificationByTokenStmt,
 		getEmailVerificationByUserIDStmt:         q.getEmailVerificationByUserIDStmt,
+		getLatestVerificationByEmailStmt:         q.getLatestVerificationByEmailStmt,
 		getOAuthLoginByProviderStmt:              q.getOAuthLoginByProviderStmt,
 		getOAuthLoginsByUserIDStmt:               q.getOAuthLoginsByUserIDStmt,
 		getScholarshipByIDStmt:                   q.getScholarshipByIDStmt,
 		getScholarshipsByIDsStmt:                 q.getScholarshipsByIDsStmt,
 		getScholarshipsByInstitutionCodeLikeStmt: q.getScholarshipsByInstitutionCodeLikeStmt,
 		getStudentProfileStmt:                    q.getStudentProfileStmt,
+		getUnverifiedUserByEmailStmt:             q.getUnverifiedUserByEmailStmt,
 		getUserByEmailStmt:                       q.getUserByEmailStmt,
 		getUserByIDStmt:                          q.getUserByIDStmt,
 		getUserByIDOrEmailStmt:                   q.getUserByIDOrEmailStmt,

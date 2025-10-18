@@ -21,9 +21,6 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		c.Status(204)
 	})
 
-	// Serve static files from public directory
-	router.Static("/public", "./public")
-
 	// CORS - Allow all origins
 	router.Use(cors.Default())
 

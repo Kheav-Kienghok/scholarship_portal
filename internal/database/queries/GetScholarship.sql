@@ -30,6 +30,23 @@ SELECT
 FROM scholarships
 WHERE id = $1;
 
+-- name: GetActiveScholarships :many
+SELECT 
+    id,
+    title,
+    provider,
+    description,
+    institution_info,
+    requirements,
+    extra_notes,
+    deadline_end,
+    official_link,
+    photo_url,
+    created_at
+FROM scholarships
+WHERE deadline_end > CURRENT_DATE
+ORDER BY deadline_end ASC;
+
 -- name: GetScholarshipsByIDs :many
 SELECT *
 FROM scholarships

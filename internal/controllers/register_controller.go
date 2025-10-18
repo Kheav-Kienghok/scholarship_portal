@@ -3,7 +3,7 @@ package controllers
 import (
 	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -35,7 +35,8 @@ func generateVerificationToken() (string, error) {
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(bytes), nil
+
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
 // Register godoc
@@ -91,7 +92,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 		Fullname:      sql.NullString{String: input.Fullname, Valid: input.Fullname != ""},
 		Email:         strings.ToLower(input.Email),
 		PasswordHash:  sql.NullString{String: string(hashedPassword), Valid: true},
-		EmailVerified: sql.NullBool{Bool: false, Valid: true}, // Set to false initially
+		EmailVerified: sql.NullBool{Bool: false, Valid: true},
 	}
 
 	user, err := r.Queries.CreateUser(c, params)
@@ -124,18 +125,12 @@ func (r *RegisterController) Register(c *gin.Context) {
 	}
 
 	// Generate verification link
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://eduvision.live"
-	}
-	verificationLink := fmt.Sprintf("%s/api/v1/auth/verify-email?token=%s", baseURL, token)
+	verificationLink := generateVerificationLink(token)
 
 	// Return success with verification link
 	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", gin.H{
 		"verification": gin.H{
-			"required": true,
-			"link":     verificationLink,
-			"expires":  "24h",
+			"link": verificationLink,
 		},
 	})
 }
@@ -195,4 +190,116 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 	}
 
 	utils.JSONIndent(c, http.StatusOK, "Email verified successfully! You can now log in.", nil)
+}
+
+// ResendVerification godoc
+// @Summary Resend verification email
+// @Description Resend verification email for unverified users
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param body body models.ResendVerificationInput true "Email address"
+// @Success 200 {object} utils.APIResponse "Verification email sent"
+// @Router /auth/resend-verification [post]
+func (r *RegisterController) ResendVerification(c *gin.Context) {
+	var input models.ResendVerificationInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+		return
+	}
+
+	// Validate email format
+	if !utils.ValidateEmail(input.Email) {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
+		return
+	}
+
+	// Normalize email
+	email := strings.ToLower(input.Email)
+
+	// Check if user exists and is unverified
+	user, err := r.Queries.GetUnverifiedUserByEmail(c, email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Don't reveal if email exists or not for security
+			utils.JSONIndent(c, http.StatusOK, "If this email is registered and unverified, a verification link will be sent.", nil)
+			return
+		}
+		logging.Error("Failed to get user:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Check if already verified
+	if user.EmailVerified.Valid && user.EmailVerified.Bool {
+		utils.JSONIndent(c, http.StatusBadRequest, "Email is already verified", nil)
+		return
+	}
+
+	// Check for rate limiting (prevent spam)
+	latestVerification, err := r.Queries.GetLatestVerificationByEmail(c, email)
+	if err != nil && err != sql.ErrNoRows {
+		logging.Error("Failed to get latest verification:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// If a verification was sent within the last 5 minutes, reject
+	if err == nil && latestVerification.CreatedAt.Valid && time.Since(latestVerification.CreatedAt.Time) < 5*time.Minute {
+		remainingTime := 5*time.Minute - time.Since(latestVerification.CreatedAt.Time)
+		utils.JSONIndent(c, http.StatusTooManyRequests,
+			fmt.Sprintf("Please wait %d seconds before requesting another verification email", int(remainingTime.Seconds())),
+			nil)
+		return
+	}
+
+	// Delete old unverified tokens for this user
+	err = r.Queries.DeleteExpiredVerifications(c, user.ID)
+	if err != nil {
+		logging.Error("Failed to delete old verifications:", err)
+		// Continue anyway
+	}
+
+	// Generate new verification token
+	token, err := generateVerificationToken()
+	if err != nil {
+		logging.Error("Failed to generate verification token:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Save new verification token
+	expiresAt := time.Now().Add(24 * time.Hour)
+	_, err = r.Queries.CreateEmailVerification(c, db.CreateEmailVerificationParams{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		logging.Error("Failed to save verification token:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Generate verification link
+	verificationLink := generateVerificationLink(token)
+
+	// Log for development
+	logging.Info("Verification email resent to:", email)
+
+	// Return success
+	utils.JSONIndent(c, http.StatusOK, "Verification email has been resent. Please check your inbox.", gin.H{
+		"verification": gin.H{
+			"link": verificationLink,
+		},
+	})
+}
+
+// Helper function to generate verification link
+func generateVerificationLink(token string) string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://eduvision.live"
+	}
+	return fmt.Sprintf("%s/verify-email?token=%s", baseURL, token)
 }

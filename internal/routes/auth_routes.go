@@ -22,10 +22,11 @@ func RegisterAuthRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
         authGroup.GET("/google/login", googleHandler.GoogleLogin)
         authGroup.GET("/google/callback", googleHandler.GoogleCallback)
 
-        // Email verification (under /auth)
+        // Email Verification
         authGroup.GET("/verify-email", registerController.VerifyEmail)
+        authGroup.POST("/resend-verification", registerController.ResendVerification)
     }
-
+    
     // Register + Login (directly under /api/v1)
     api.POST("/register", registerController.Register)
     api.POST("/login", loginController.Login)

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -57,6 +58,16 @@ func (q *Queries) DeleteEmailVerificationsByUserID(ctx context.Context, userID i
 	return err
 }
 
+const deleteExpiredVerifications = `-- name: DeleteExpiredVerifications :exec
+DELETE FROM email_verifications
+WHERE user_id = $1 AND verified_at IS NULL
+`
+
+func (q *Queries) DeleteExpiredVerifications(ctx context.Context, userID int32) error {
+	_, err := q.exec(ctx, q.deleteExpiredVerificationsStmt, deleteExpiredVerifications, userID)
+	return err
+}
+
 const getEmailVerificationByToken = `-- name: GetEmailVerificationByToken :one
 SELECT id, user_id, token, expires_at, verified_at, created_at, updated_at FROM email_verifications
 WHERE token = $1 AND verified_at IS NULL
@@ -95,6 +106,55 @@ func (q *Queries) GetEmailVerificationByUserID(ctx context.Context, userID int32
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getLatestVerificationByEmail = `-- name: GetLatestVerificationByEmail :one
+SELECT ev.id, ev.user_id, ev.token, ev.expires_at, ev.verified_at, ev.created_at, ev.updated_at 
+FROM email_verifications ev
+JOIN users u ON ev.user_id = u.id
+WHERE u.email = $1
+ORDER BY ev.created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestVerificationByEmail(ctx context.Context, email string) (EmailVerification, error) {
+	row := q.queryRow(ctx, q.getLatestVerificationByEmailStmt, getLatestVerificationByEmail, email)
+	var i EmailVerification
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.VerifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUnverifiedUserByEmail = `-- name: GetUnverifiedUserByEmail :one
+SELECT id, email, email_verified, created_at
+FROM users
+WHERE email = $1 AND email_verified = false
+`
+
+type GetUnverifiedUserByEmailRow struct {
+	ID            int32        `json:"id"`
+	Email         string       `json:"email"`
+	EmailVerified sql.NullBool `json:"email_verified"`
+	CreatedAt     sql.NullTime `json:"created_at"`
+}
+
+func (q *Queries) GetUnverifiedUserByEmail(ctx context.Context, email string) (GetUnverifiedUserByEmailRow, error) {
+	row := q.queryRow(ctx, q.getUnverifiedUserByEmailStmt, getUnverifiedUserByEmail, email)
+	var i GetUnverifiedUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.CreatedAt,
 	)
 	return i, err
 }

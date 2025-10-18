@@ -25,3 +25,20 @@ LIMIT 1;
 -- name: CleanupExpiredVerifications :exec
 DELETE FROM email_verifications
 WHERE expires_at < CURRENT_TIMESTAMP;
+
+-- name: GetLatestVerificationByEmail :one
+SELECT ev.* 
+FROM email_verifications ev
+JOIN users u ON ev.user_id = u.id
+WHERE u.email = $1
+ORDER BY ev.created_at DESC
+LIMIT 1;
+
+-- name: DeleteExpiredVerifications :exec
+DELETE FROM email_verifications
+WHERE user_id = $1 AND verified_at IS NULL;
+
+-- name: GetUnverifiedUserByEmail :one
+SELECT id, email, email_verified, created_at
+FROM users
+WHERE email = $1 AND email_verified = false;

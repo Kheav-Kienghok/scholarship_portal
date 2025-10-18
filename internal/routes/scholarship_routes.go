@@ -17,6 +17,7 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 	{
 		// Apply ETag middleware only to GET endpoints
 		scholarshipGroup.GET("", middlewares.ETagMiddleware(), scholarshipController.GetScholarships)
+		scholarshipGroup.GET("/active", middlewares.ETagMiddleware(), scholarshipController.GetActiveScholarship)
 	}
 
 	// Admin only
