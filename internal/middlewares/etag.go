@@ -37,15 +37,14 @@ func ETagMiddleware() gin.HandlerFunc {
 		}
 		c.Writer = writer
 
-		// Process the request
 		c.Next()
 
-		// Only add ETag for successful responses
 		if c.Writer.Status() == http.StatusOK {
 			// Generate ETag from response body
 			hash := md5.New()
 			io.Copy(hash, writer.body)
-			etag := `"` + hex.EncodeToString(hash.Sum(nil)) + `"`
+			etag := `W/"` + hex.EncodeToString(hash.Sum(nil)) + `"`  // Weak ETag
+			// etag := `"` + hex.EncodeToString(hash.Sum(nil)) + `"`
 
 			// Check if client sent If-None-Match header
 			clientETag := c.GetHeader("If-None-Match")
@@ -57,9 +56,9 @@ func ETagMiddleware() gin.HandlerFunc {
 				return
 			}
 
-			// Set ETag header
+			// 👇 Weak ETag + safe Cache-Control (Cloudflare won’t override)
 			c.Header("ETag", etag)
-			c.Header("Cache-Control", "no-cache")
+			c.Header("Cache-Control", "no-cache, must-revalidate")
 		}
 	}
 }

@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/lib/pq"
 	"github.com/sqlc-dev/pqtype"
@@ -324,6 +325,143 @@ func (q *Queries) SearchScholarships(ctx context.Context, arg SearchScholarships
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.InstitutionCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchScholarshipsByPrograms = `-- name: SearchScholarshipsByPrograms :many
+
+SELECT
+    s.id,
+    s.title,
+    s.provider,
+    s.description,
+    jsonb_agg(
+        jsonb_build_object(
+            'institution', inst->>'institution',
+            'programs_offered', filtered.programs_offered
+        )
+    ) AS institution_info,
+    s.requirements,
+    s.extra_notes,
+    s.deadline_end,
+    s.official_link,
+    s.photo_url,
+    s.created_at
+FROM scholarships s,
+jsonb_array_elements(s.institution_info) AS inst
+LEFT JOIN LATERAL (
+    SELECT jsonb_agg(program) AS programs_offered
+    FROM jsonb_array_elements_text(inst->'programs_offered') AS program
+    WHERE EXISTS (
+        SELECT 1
+        FROM unnest($1::text[]) AS pattern
+        WHERE 
+            (
+                LENGTH(TRIM(pattern)) <= 3
+                AND program ~* ('\y' || pattern || '\y')
+            )
+            OR
+            (
+                LENGTH(TRIM(pattern)) > 3
+                AND LOWER(program) LIKE '%' || LOWER(pattern) || '%'
+            )
+    )
+) AS filtered ON true
+WHERE filtered.programs_offered IS NOT NULL
+GROUP BY s.id, s.title, s.provider, s.description, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at
+ORDER BY s.deadline_end ASC
+`
+
+type SearchScholarshipsByProgramsRow struct {
+	ID              int32                 `json:"id"`
+	Title           string                `json:"title"`
+	Provider        string                `json:"provider"`
+	Description     sql.NullString        `json:"description"`
+	InstitutionInfo json.RawMessage       `json:"institution_info"`
+	Requirements    pqtype.NullRawMessage `json:"requirements"`
+	ExtraNotes      sql.NullString        `json:"extra_notes"`
+	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
+	OfficialLink    sql.NullString        `json:"official_link"`
+	PhotoUrl        sql.NullString        `json:"photo_url"`
+	CreatedAt       sql.NullTime          `json:"created_at"`
+}
+
+// SELECT
+//
+//	s.id,
+//	s.title,
+//	s.provider,
+//	s.description,
+//	jsonb_agg(
+//	    jsonb_build_object(
+//	        'institution', inst->>'institution',
+//	        'programs_offered', filtered.programs_offered
+//	    )
+//	) AS institution_info,
+//	s.requirements,
+//	s.extra_notes,
+//	s.deadline_end,
+//	s.official_link,
+//	s.photo_url,
+//	s.created_at
+//
+// FROM scholarships s,
+// jsonb_array_elements(s.institution_info) AS inst
+// LEFT JOIN LATERAL (
+//
+//	SELECT jsonb_agg(program) AS programs_offered
+//	FROM jsonb_array_elements_text(inst->'programs_offered') AS program
+//	WHERE EXISTS (
+//	    SELECT 1
+//	    FROM unnest($1::text[]) AS pattern
+//	    WHERE
+//	        (
+//	            LENGTH(TRIM(pattern)) <= 3
+//	            AND program ~* ('\y' || pattern || '\y')
+//	        )
+//	        OR
+//	        (
+//	            LENGTH(TRIM(pattern)) > 3
+//	            AND LOWER(program) LIKE '%' || LOWER(pattern) || '%'
+//	        )
+//	)
+//
+// ) AS filtered ON true
+// WHERE filtered.programs_offered IS NOT NULL
+// GROUP BY s.id, s.title, s.provider, s.description, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at
+// ORDER BY s.deadline_end ASC;
+func (q *Queries) SearchScholarshipsByPrograms(ctx context.Context, dollar_1 []string) ([]SearchScholarshipsByProgramsRow, error) {
+	rows, err := q.query(ctx, q.searchScholarshipsByProgramsStmt, searchScholarshipsByPrograms, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchScholarshipsByProgramsRow
+	for rows.Next() {
+		var i SearchScholarshipsByProgramsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Provider,
+			&i.Description,
+			&i.InstitutionInfo,
+			&i.Requirements,
+			&i.ExtraNotes,
+			&i.DeadlineEnd,
+			&i.OfficialLink,
+			&i.PhotoUrl,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

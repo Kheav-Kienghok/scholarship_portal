@@ -14,6 +14,25 @@ func (d DateOnly) MarshalJSON() ([]byte, error) {
 	return []byte(formatted), nil
 }
 
+type Institution struct {
+	Institution     string   `json:"institution"`
+	ProgramsOffered []string `json:"programs_offered,omitempty"` // omit empty
+}
+
+type ScholarshipSearchResponse struct {
+	ID              int           `json:"id"`
+	Title           string        `json:"title"`
+	Provider        string        `json:"provider"`
+	Description     string        `json:"description"`
+	InstitutionInfo []Institution `json:"institution_info,omitempty"`
+	Requirements    interface{}   `json:"requirements"`
+	ExtraNotes      string        `json:"extra_notes"`
+	DeadlineEnd     *DateOnly     `json:"deadline_end"`
+	OfficialLink    string        `json:"official_link"`
+	PhotoURL        string        `json:"photo_url"`
+	CreatedAt       DateOnly      `json:"created_at"`
+}
+
 type CreateScholarshipRequest struct {
 	Title           string          `form:"title" json:"title"`
 	Provider        string          `form:"provider" json:"provider"`

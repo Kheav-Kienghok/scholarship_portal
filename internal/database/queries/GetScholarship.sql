@@ -92,3 +92,86 @@ UPDATE scholarships SET
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- SELECT
+--     s.id,
+--     s.title,
+--     s.provider,
+--     s.description,
+--     jsonb_agg(
+--         jsonb_build_object(
+--             'institution', inst->>'institution',
+--             'programs_offered', filtered.programs_offered
+--         )
+--     ) AS institution_info,
+--     s.requirements,
+--     s.extra_notes,
+--     s.deadline_end,
+--     s.official_link,
+--     s.photo_url,
+--     s.created_at
+-- FROM scholarships s,
+-- jsonb_array_elements(s.institution_info) AS inst
+-- LEFT JOIN LATERAL (
+--     SELECT jsonb_agg(program) AS programs_offered
+--     FROM jsonb_array_elements_text(inst->'programs_offered') AS program
+--     WHERE EXISTS (
+--         SELECT 1
+--         FROM unnest($1::text[]) AS pattern
+--         WHERE 
+--             (
+--                 LENGTH(TRIM(pattern)) <= 3
+--                 AND program ~* ('\y' || pattern || '\y')
+--             )
+--             OR
+--             (
+--                 LENGTH(TRIM(pattern)) > 3
+--                 AND LOWER(program) LIKE '%' || LOWER(pattern) || '%'
+--             )
+--     )
+-- ) AS filtered ON true
+-- WHERE filtered.programs_offered IS NOT NULL
+-- GROUP BY s.id, s.title, s.provider, s.description, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at
+-- ORDER BY s.deadline_end ASC;
+
+-- name: SearchScholarshipsByPrograms :many
+SELECT
+    s.id,
+    s.title,
+    s.provider,
+    s.description,
+    jsonb_agg(
+        jsonb_build_object(
+            'institution', inst->>'institution',
+            'programs_offered', filtered.programs_offered
+        )
+    ) AS institution_info,
+    s.requirements,
+    s.extra_notes,
+    s.deadline_end,
+    s.official_link,
+    s.photo_url,
+    s.created_at
+FROM scholarships s,
+jsonb_array_elements(s.institution_info) AS inst
+LEFT JOIN LATERAL (
+    SELECT jsonb_agg(program) AS programs_offered
+    FROM jsonb_array_elements_text(inst->'programs_offered') AS program
+    WHERE EXISTS (
+        SELECT 1
+        FROM unnest($1::text[]) AS pattern
+        WHERE 
+            (
+                LENGTH(TRIM(pattern)) <= 3
+                AND program ~* ('\y' || pattern || '\y')
+            )
+            OR
+            (
+                LENGTH(TRIM(pattern)) > 3
+                AND LOWER(program) LIKE '%' || LOWER(pattern) || '%'
+            )
+    )
+) AS filtered ON true
+WHERE filtered.programs_offered IS NOT NULL
+GROUP BY s.id, s.title, s.provider, s.description, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at
+ORDER BY s.deadline_end ASC;

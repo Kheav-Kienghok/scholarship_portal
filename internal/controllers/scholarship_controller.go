@@ -354,3 +354,43 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 	}
 	utils.JSONIndent(c, http.StatusOK, "Scholarship updated successfully", response)
 }
+
+// FilterByCategory godoc
+// @Summary Filter scholarships by program category
+// @Description Filter scholarships by program categories (IT, Engineering, Business, etc.)
+// @Tags Scholarships
+// @Produce json
+// @Param category query string true "Category name (IT, Engineering, Business, Economics & Finance, Medicine & Health, Science, Arts & Humanities)"
+// @Success 200 {object} utils.Response{data=[]models.Scholarship} "Filtered scholarships"
+// @Router /scholarships/filter [get]
+func (ctrl *ScholarshipController) FilterByCategory(c *gin.Context) {
+	category := c.Query("category")
+	if category == "" {
+		utils.JSONIndent(c, http.StatusBadRequest, "Category parameter is required", nil)
+		return
+	}
+
+	// Get all programs for this category
+	programs := utils.ExpandCategoryToPrograms(category)
+	if len(programs) == 0 {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid category", gin.H{
+			"valid_categories": utils.ValidCategories(),
+		})
+		return
+	}
+
+	// Query database with all programs
+	scholarships, err := ctrl.Queries.SearchScholarshipsByPrograms(c, programs)
+	if err != nil {
+		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not filter scholarships")
+		return
+	}
+
+	if len(scholarships) == 0 {
+		utils.JSONIndent(c, http.StatusOK, "No scholarships found for this category", []models.ScholarshipResponse{})
+		return
+	}
+
+	response := builder.BuildSearchScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	utils.JSONIndent(c, http.StatusOK, fmt.Sprintf("Found %d scholarship(s) in %s category", len(scholarships), category), response)
+}

@@ -17,6 +17,8 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	router.Use(middlewares.ErrorHandler())
 	router.Use(gin.Recovery())
 
+	router.Use(middlewares.ETagMiddleware())
+
 	router.GET("/favicon.ico", func(c *gin.Context) {
 		c.Status(204)
 	})

@@ -263,3 +263,81 @@ func (s ActiveScholarshipWrapper) GetUpdatedAt() *time.Time {
     // GetActiveScholarshipsRow does not include an UpdatedAt field
     return nil
 }
+
+// ============================================
+// SearchScholarshipWrapper - wraps db.SearchScholarshipsByProgramsRow
+// ============================================
+type SearchScholarshipWrapper struct {
+    db.SearchScholarshipsByProgramsRow
+}
+
+func (s SearchScholarshipWrapper) GetID() int32 {
+    return s.ID
+}
+
+func (s SearchScholarshipWrapper) GetTitle() string {
+    return s.Title
+}
+
+func (s SearchScholarshipWrapper) GetProvider() string {
+    return s.Provider
+}
+
+func (s SearchScholarshipWrapper) GetDescription() string {
+    if s.Description.Valid {
+        return s.Description.String
+    }
+    return ""
+}
+
+func (s SearchScholarshipWrapper) GetInstitutionInfo() json.RawMessage {
+    // SearchScholarshipsByProgramsRow does not include an InstitutionInfo field
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetRequirements() json.RawMessage {
+    if s.Requirements.Valid {
+        return s.Requirements.RawMessage
+    }
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetExtraNotes() string {
+    if s.ExtraNotes.Valid {
+        return s.ExtraNotes.String
+    }
+    return ""
+}
+
+func (s SearchScholarshipWrapper) GetDeadlineEnd() *time.Time {
+    if s.DeadlineEnd.Valid {
+        return &s.DeadlineEnd.Time
+    }
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetOfficialLink() *string {
+    if s.OfficialLink.Valid {
+        return &s.OfficialLink.String
+    }
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetPhotoUrl() *string {
+    if s.PhotoUrl.Valid {
+        return &s.PhotoUrl.String
+    }
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetCreatedAt() *time.Time {
+    if s.CreatedAt.Valid {
+        return &s.CreatedAt.Time
+    }
+    return nil
+}
+
+func (s SearchScholarshipWrapper) GetUpdatedAt() *time.Time {
+    // SearchScholarshipsByProgramsRow does not include an UpdatedAt field
+    return nil
+}

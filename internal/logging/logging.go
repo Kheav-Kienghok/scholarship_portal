@@ -48,6 +48,10 @@ func Error(message string, details ...interface{}) {
 	logMessage("ERROR", message, details...)
 }
 
+func Debug(message string, details ...interface{}) {
+	logMessage("DEBUG", message, details...)
+}
+
 // GinLogger returns a Gin middleware for logging endpoint info and errors
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {

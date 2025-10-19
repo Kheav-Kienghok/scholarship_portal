@@ -13,6 +13,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -186,8 +187,33 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 	err = r.Queries.MarkEmailVerificationAsUsed(c, verification.ID)
 	if err != nil {
 		logging.Error("Failed to mark verification as used:", err)
-		// Don't fail the verification, just log
 	}
+
+	// Fetch the user to generate JWT
+	user, err := r.Queries.GetUserByID(c, verification.UserID)
+	if err != nil {
+		logging.Error("Failed to fetch user:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return
+	}
+
+	// Generate JWT token
+	jwtToken, err := tokens.GenerateToken(user.ID, user.Fullname.String, user.Email, "student")
+	if err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Could not generate token", nil)
+		return
+	}
+
+	// Set JWT as HttpOnly cookie
+	c.SetCookie(
+		"token",  // cookie name
+		jwtToken, // cookie value
+		3600*24,  // max age in seconds (e.g., 1 day)
+		"/",      // path
+		"",       // domain (empty = current domain)
+		true,     // secure (true if using HTTPS)
+		true,     // HttpOnly (JS cannot access)
+	)
 
 	utils.JSONIndent(c, http.StatusOK, "Email verified successfully! You can now log in.", nil)
 }
