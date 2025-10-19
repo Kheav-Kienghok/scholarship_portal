@@ -65,7 +65,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	validatePassword := utils.ValidatePassword(input.Password)
 	if !validatePassword {
-		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 6 characters", nil)
+		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 12 characters and include uppercase, lowercase", nil)
 		return
 	}
 
@@ -206,16 +206,19 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 
 	// Set JWT as HttpOnly cookie
 	c.SetCookie(
-		"token",  // cookie name
-		jwtToken, // cookie value
-		3600*24,  // max age in seconds (e.g., 1 day)
-		"/",      // path
-		"",       // domain (empty = current domain)
-		true,     // secure (true if using HTTPS)
-		true,     // HttpOnly (JS cannot access)
+		"jwt",             // cookie name
+		jwtToken,          // cookie value
+		3600*12,           // max age in seconds (e.g., 1 day)
+		"/",               // path
+		".eduvision.live", // domain (empty = current domain)
+		true,              // secure (true if using HTTPS)
+		false,              // HttpOnly (JS cannot access)
 	)
 
-	utils.JSONIndent(c, http.StatusOK, "Email verified successfully! You can now log in.", nil)
+	// c.Redirect(http.StatusSeeOther, "https://www.eduvision.live")
+	// utils.JSONIndent(c, http.StatusOK, "Email verified successfully! You can now log in.", nil)
+
+	c.Redirect(http.StatusSeeOther, "https://www.eduvision.live")
 }
 
 // ResendVerification godoc
