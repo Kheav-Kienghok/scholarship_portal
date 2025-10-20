@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
@@ -23,8 +25,19 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		c.Status(204)
 	})
 
-	// CORS - Allow all origins
-	router.Use(cors.Default())
+	config := cors.Config{
+		AllowAllOrigins:  true, // or AllowOrigins: []string{"http://localhost:3000"}
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+
+	router.Use(cors.New(config))
+
+	// // CORS - Allow all origins
+	// router.Use(cors.Default())
 
 	// // CORS
 	// router.Use(cors.New(cors.Config{

@@ -128,6 +128,14 @@ func (r *RegisterController) Register(c *gin.Context) {
 	// Generate verification link
 	verificationLink := generateVerificationLink(token)
 
+	// Uncomment this to send link
+	// err = utils.SendVerificationEmail(c, user.Email, user.Fullname.String, verificationLink)
+	// if err != nil {
+	// 	logging.Error("Failed to send verification email:", err)
+	// 	utils.JSONIndent(c, http.StatusInternalServerError, "Could not send verification email", nil)
+	// 	return
+	// }
+
 	// Return success with verification link
 	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", gin.H{
 		"verification": gin.H{
@@ -212,7 +220,7 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 		"/",               // path
 		".eduvision.live", // domain (empty = current domain)
 		true,              // secure (true if using HTTPS)
-		false,              // HttpOnly (JS cannot access)
+		false,             // HttpOnly (JS cannot access)
 	)
 
 	// c.Redirect(http.StatusSeeOther, "https://www.eduvision.live")
@@ -312,9 +320,6 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 
 	// Generate verification link
 	verificationLink := generateVerificationLink(token)
-
-	// Log for development
-	logging.Info("Verification email resent to:", email)
 
 	// Return success
 	utils.JSONIndent(c, http.StatusOK, "Verification email has been resent. Please check your inbox.", gin.H{
