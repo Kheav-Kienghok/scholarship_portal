@@ -1,343 +1,235 @@
 package builder
 
 import (
-    "encoding/json"
-    "time"
+	"database/sql"
+	"encoding/json"
+	"time"
 
-    "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 )
 
-// ScholarshipSource is an interface for different scholarship data sources
+// ScholarshipSource defines a generic scholarship interface
 type ScholarshipSource interface {
-    GetID() int32
-    GetTitle() string
-    GetProvider() string
-    GetDescription() string
-    GetInstitutionInfo() json.RawMessage
-    GetRequirements() json.RawMessage
-    GetExtraNotes() string
-    GetDeadlineEnd() *time.Time
-    GetOfficialLink() *string
-    GetPhotoUrl() *string
-    GetCreatedAt() *time.Time
-    GetUpdatedAt() *time.Time
+	GetID() int32
+	GetTitle() string
+	GetProvider() string
+	GetDescription() string
+	GetInstitutionInfo() json.RawMessage
+	GetRequirements() json.RawMessage
+	GetExtraNotes() string
+	GetDeadlineEnd() *time.Time
+	GetOfficialLink() *string
+	GetPhotoUrl() *string
+	GetCreatedAt() *time.Time
+	GetUpdatedAt() *time.Time
 }
 
-// ============================================
-// ScholarshipWrapper - wraps db.Scholarship
-// ============================================
-type ScholarshipWrapper struct {
-    db.Scholarship
+// =====================================================
+// baseScholarshipWrapper - shared logic for all wrappers
+// =====================================================
+type baseScholarshipWrapper struct {
+	ID              int32
+	Title           string
+	Provider        string
+	Description     nullableString
+	InstitutionInfo nullableJSON
+	Requirements    nullableJSON
+	ExtraNotes      nullableString
+	DeadlineEnd     nullableTime
+	OfficialLink    nullableString
+	PhotoUrl        nullableString
+	CreatedAt       nullableTime
+	UpdatedAt       nullableTime
 }
 
-func (s ScholarshipWrapper) GetID() int32 {
-    return s.ID
+// --- Null Type Wrappers ---
+
+type nullableString struct {
+	Valid  bool
+	String string
 }
 
-func (s ScholarshipWrapper) GetTitle() string {
-    return s.Title
+type nullableTime struct {
+	Valid bool
+	Time  time.Time
 }
 
-func (s ScholarshipWrapper) GetProvider() string {
-    return s.Provider
+type nullableJSON struct {
+	Valid      bool
+	RawMessage json.RawMessage
 }
 
-func (s ScholarshipWrapper) GetDescription() string {
-    if s.Description.Valid {
-        return s.Description.String
-    }
-    return ""
+// --- Converters from sql.Null* types ---
+
+func fromNullString(ns sql.NullString) nullableString {
+	return nullableString{
+		Valid:  ns.Valid,
+		String: ns.String,
+	}
 }
 
-func (s ScholarshipWrapper) GetInstitutionInfo() json.RawMessage {
-    if s.InstitutionInfo.Valid {
-        return s.InstitutionInfo.RawMessage
-    }
-    return nil
+func fromNullTime(nt sql.NullTime) nullableTime {
+	return nullableTime{
+		Valid: nt.Valid,
+		Time:  nt.Time,
+	}
 }
 
-func (s ScholarshipWrapper) GetRequirements() json.RawMessage {
-    if s.Requirements.Valid {
-        return s.Requirements.RawMessage
-    }
-    return nil
+// You probably used a custom type for JSON columns (like pgtype.JSONB or sql.NullString).
+// Assuming you stored JSON as json.RawMessage in a nullable column, handle it generically:
+func fromNullableJSON(valid bool, raw json.RawMessage) nullableJSON {
+	return nullableJSON{
+		Valid:      valid,
+		RawMessage: raw,
+	}
 }
 
-func (s ScholarshipWrapper) GetExtraNotes() string {
-    if s.ExtraNotes.Valid {
-        return s.ExtraNotes.String
-    }
-    return ""
+// --------------------------
+// Interface implementations
+// --------------------------
+func (s baseScholarshipWrapper) GetID() int32        { return s.ID }
+func (s baseScholarshipWrapper) GetTitle() string    { return s.Title }
+func (s baseScholarshipWrapper) GetProvider() string { return s.Provider }
+func (s baseScholarshipWrapper) GetDescription() string {
+	if s.Description.Valid {
+		return s.Description.String
+	}
+	return ""
+}
+func (s baseScholarshipWrapper) GetInstitutionInfo() json.RawMessage {
+	if s.InstitutionInfo.Valid {
+		return s.InstitutionInfo.RawMessage
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetRequirements() json.RawMessage {
+	if s.Requirements.Valid {
+		return s.Requirements.RawMessage
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetExtraNotes() string {
+	if s.ExtraNotes.Valid {
+		return s.ExtraNotes.String
+	}
+	return ""
+}
+func (s baseScholarshipWrapper) GetDeadlineEnd() *time.Time {
+	if s.DeadlineEnd.Valid {
+		return &s.DeadlineEnd.Time
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetOfficialLink() *string {
+	if s.OfficialLink.Valid {
+		return &s.OfficialLink.String
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetPhotoUrl() *string {
+	if s.PhotoUrl.Valid {
+		return &s.PhotoUrl.String
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetCreatedAt() *time.Time {
+	if s.CreatedAt.Valid {
+		return &s.CreatedAt.Time
+	}
+	return nil
+}
+func (s baseScholarshipWrapper) GetUpdatedAt() *time.Time {
+	if s.UpdatedAt.Valid {
+		return &s.UpdatedAt.Time
+	}
+	return nil
 }
 
-func (s ScholarshipWrapper) GetDeadlineEnd() *time.Time {
-    if s.DeadlineEnd.Valid {
-        return &s.DeadlineEnd.Time
-    }
-    return nil
+// =====================================================
+// Constructors for each wrapper type
+// =====================================================
+
+func NewScholarshipWrapper(s db.Scholarship) ScholarshipSource {
+	return baseScholarshipWrapper{
+		ID:              s.ID,
+		Title:           s.Title,
+		Provider:        s.Provider,
+		Description:     fromNullString(s.Description),
+		InstitutionInfo: fromNullableJSON(s.InstitutionInfo.Valid, s.InstitutionInfo.RawMessage),
+		Requirements:    fromNullableJSON(s.Requirements.Valid, s.Requirements.RawMessage),
+		ExtraNotes:      fromNullString(s.ExtraNotes),
+		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
+		OfficialLink:    fromNullString(s.OfficialLink),
+		PhotoUrl:        fromNullString(s.PhotoUrl),
+		CreatedAt:       fromNullTime(s.CreatedAt),
+		UpdatedAt:       fromNullTime(s.UpdatedAt),
+	}
 }
 
-func (s ScholarshipWrapper) GetOfficialLink() *string {
-    if s.OfficialLink.Valid {
-        return &s.OfficialLink.String
-    }
-    return nil
+func NewAllScholarshipsWrapper(s db.GetAllScholarshipsRow) ScholarshipSource {
+	return baseScholarshipWrapper{
+		ID:              s.ID,
+		Title:           s.Title,
+		Provider:        s.Provider,
+		Description:     fromNullString(s.Description),
+		InstitutionInfo: fromNullableJSON(s.InstitutionInfo.Valid, s.InstitutionInfo.RawMessage),
+		Requirements:    fromNullableJSON(s.Requirements.Valid, s.Requirements.RawMessage),
+		ExtraNotes:      fromNullString(s.ExtraNotes),
+		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
+		OfficialLink:    fromNullString(s.OfficialLink),
+		PhotoUrl:        fromNullString(s.PhotoUrl),
+		CreatedAt:       fromNullTime(s.CreatedAt),
+	}
 }
 
-func (s ScholarshipWrapper) GetPhotoUrl() *string {
-    if s.PhotoUrl.Valid {
-        return &s.PhotoUrl.String
-    }
-    return nil
+func NewActiveScholarshipWrapper(s db.GetActiveScholarshipsRow) ScholarshipSource {
+	return baseScholarshipWrapper{
+		ID:              s.ID,
+		Title:           s.Title,
+		Provider:        s.Provider,
+		Description:     fromNullString(s.Description),
+		InstitutionInfo: fromNullableJSON(s.InstitutionInfo.Valid, s.InstitutionInfo.RawMessage),
+		Requirements:    fromNullableJSON(s.Requirements.Valid, s.Requirements.RawMessage),
+		ExtraNotes:      fromNullString(s.ExtraNotes),
+		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
+		OfficialLink:    fromNullString(s.OfficialLink),
+		PhotoUrl:        fromNullString(s.PhotoUrl),
+		CreatedAt:       fromNullTime(s.CreatedAt),
+	}
 }
 
-func (s ScholarshipWrapper) GetCreatedAt() *time.Time {
-    if s.CreatedAt.Valid {
-        return &s.CreatedAt.Time
-    }
-    return nil
+func NewSearchScholarshipWrapper(s db.SearchScholarshipsByProgramsRow) ScholarshipSource {
+	return baseScholarshipWrapper{
+		ID:              s.ID,
+		Title:           s.Title,
+		Provider:        s.Provider,
+		Description:     fromNullString(s.Description),
+		InstitutionInfo: nullableJSON{Valid: false, RawMessage: nil}, // Not available in search
+		Requirements:    fromNullableJSON(s.Requirements.Valid, s.Requirements.RawMessage),
+		ExtraNotes:      fromNullString(s.ExtraNotes),
+		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
+		OfficialLink:    fromNullString(s.OfficialLink),
+		PhotoUrl:        fromNullString(s.PhotoUrl),
+		CreatedAt:       fromNullTime(s.CreatedAt),
+	}
 }
 
-func (s ScholarshipWrapper) GetUpdatedAt() *time.Time {
-    if s.UpdatedAt.Valid {
-        return &s.UpdatedAt.Time
-    }
-    return nil
+func NewGetScholarshipByIDWrapper(s db.GetScholarshipByIDRow) ScholarshipSource {
+	return baseScholarshipWrapper{
+		ID:              s.ID,
+		Title:           s.Title,
+		Provider:        s.Provider,
+		Description:     fromNullString(s.Description),
+		InstitutionInfo: fromNullableJSON(s.InstitutionInfo.Valid, s.InstitutionInfo.RawMessage),
+		Requirements:    fromNullableJSON(s.Requirements.Valid, s.Requirements.RawMessage),
+		ExtraNotes:      fromNullString(s.ExtraNotes),
+		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
+		OfficialLink:    fromNullString(s.OfficialLink),
+		PhotoUrl:        fromNullString(s.PhotoUrl),
+		CreatedAt:       fromNullTime(s.CreatedAt),
+	}
 }
 
-// ============================================
-// AllScholarshipsWrapper - wraps db.GetAllScholarshipsRow
-// ============================================
-type AllScholarshipsWrapper struct {
-    db.GetAllScholarshipsRow
-}
-
-func (s AllScholarshipsWrapper) GetID() int32 {
-    return s.ID
-}
-
-func (s AllScholarshipsWrapper) GetTitle() string {
-    return s.Title
-}
-
-func (s AllScholarshipsWrapper) GetProvider() string {
-    return s.Provider
-}
-
-func (s AllScholarshipsWrapper) GetDescription() string {
-    if s.Description.Valid {
-        return s.Description.String
-    }
-    return ""
-}
-
-func (s AllScholarshipsWrapper) GetInstitutionInfo() json.RawMessage {
-    if s.InstitutionInfo.Valid {
-        return s.InstitutionInfo.RawMessage
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetRequirements() json.RawMessage {
-    if s.Requirements.Valid {
-        return s.Requirements.RawMessage
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetExtraNotes() string {
-    if s.ExtraNotes.Valid {
-        return s.ExtraNotes.String
-    }
-    return ""
-}
-
-func (s AllScholarshipsWrapper) GetDeadlineEnd() *time.Time {
-    if s.DeadlineEnd.Valid {
-        return &s.DeadlineEnd.Time
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetOfficialLink() *string {
-    if s.OfficialLink.Valid {
-        return &s.OfficialLink.String
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetPhotoUrl() *string {
-    if s.PhotoUrl.Valid {
-        return &s.PhotoUrl.String
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetCreatedAt() *time.Time {
-    if s.CreatedAt.Valid {
-        return &s.CreatedAt.Time
-    }
-    return nil
-}
-
-func (s AllScholarshipsWrapper) GetUpdatedAt() *time.Time {
-    return nil
-}
-
-// ============================================
-// ActiveScholarshipWrapper - wraps db.GetActiveScholarshipsRow
-// ============================================
-type ActiveScholarshipWrapper struct {
-    db.GetActiveScholarshipsRow
-}
-
-func (s ActiveScholarshipWrapper) GetID() int32 {
-    return s.ID
-}
-
-func (s ActiveScholarshipWrapper) GetTitle() string {
-    return s.Title
-}
-
-func (s ActiveScholarshipWrapper) GetProvider() string {
-    return s.Provider
-}
-
-func (s ActiveScholarshipWrapper) GetDescription() string {
-    if s.Description.Valid {
-        return s.Description.String
-    }
-    return ""
-}
-
-func (s ActiveScholarshipWrapper) GetInstitutionInfo() json.RawMessage {
-    if s.InstitutionInfo.Valid {
-        return s.InstitutionInfo.RawMessage
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetRequirements() json.RawMessage {
-    if s.Requirements.Valid {
-        return s.Requirements.RawMessage
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetExtraNotes() string {
-    if s.ExtraNotes.Valid {
-        return s.ExtraNotes.String
-    }
-    return ""
-}
-
-func (s ActiveScholarshipWrapper) GetDeadlineEnd() *time.Time {
-    if s.DeadlineEnd.Valid {
-        return &s.DeadlineEnd.Time
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetOfficialLink() *string {
-    if s.OfficialLink.Valid {
-        return &s.OfficialLink.String
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetPhotoUrl() *string {
-    if s.PhotoUrl.Valid {
-        return &s.PhotoUrl.String
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetCreatedAt() *time.Time {
-    if s.CreatedAt.Valid {
-        return &s.CreatedAt.Time
-    }
-    return nil
-}
-
-func (s ActiveScholarshipWrapper) GetUpdatedAt() *time.Time {
-    // GetActiveScholarshipsRow does not include an UpdatedAt field
-    return nil
-}
-
-// ============================================
-// SearchScholarshipWrapper - wraps db.SearchScholarshipsByProgramsRow
-// ============================================
-type SearchScholarshipWrapper struct {
-    db.SearchScholarshipsByProgramsRow
-}
-
-func (s SearchScholarshipWrapper) GetID() int32 {
-    return s.ID
-}
-
-func (s SearchScholarshipWrapper) GetTitle() string {
-    return s.Title
-}
-
-func (s SearchScholarshipWrapper) GetProvider() string {
-    return s.Provider
-}
-
-func (s SearchScholarshipWrapper) GetDescription() string {
-    if s.Description.Valid {
-        return s.Description.String
-    }
-    return ""
-}
-
-func (s SearchScholarshipWrapper) GetInstitutionInfo() json.RawMessage {
-    // SearchScholarshipsByProgramsRow does not include an InstitutionInfo field
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetRequirements() json.RawMessage {
-    if s.Requirements.Valid {
-        return s.Requirements.RawMessage
-    }
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetExtraNotes() string {
-    if s.ExtraNotes.Valid {
-        return s.ExtraNotes.String
-    }
-    return ""
-}
-
-func (s SearchScholarshipWrapper) GetDeadlineEnd() *time.Time {
-    if s.DeadlineEnd.Valid {
-        return &s.DeadlineEnd.Time
-    }
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetOfficialLink() *string {
-    if s.OfficialLink.Valid {
-        return &s.OfficialLink.String
-    }
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetPhotoUrl() *string {
-    if s.PhotoUrl.Valid {
-        return &s.PhotoUrl.String
-    }
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetCreatedAt() *time.Time {
-    if s.CreatedAt.Valid {
-        return &s.CreatedAt.Time
-    }
-    return nil
-}
-
-func (s SearchScholarshipWrapper) GetUpdatedAt() *time.Time {
-    // SearchScholarshipsByProgramsRow does not include an UpdatedAt field
-    return nil
+func NewGetScholarshipByIDsWrapper(s db.Scholarship) ScholarshipSource {
+	return NewScholarshipWrapper(s)
 }

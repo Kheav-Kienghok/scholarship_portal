@@ -149,7 +149,7 @@ func (q *Queries) GetAllScholarships(ctx context.Context) ([]GetAllScholarshipsR
 
 const getScholarshipByID = `-- name: GetScholarshipByID :one
 SELECT 
-    id AS scholarship_id,
+    id,
     title,
     provider,
     description,
@@ -165,7 +165,7 @@ WHERE id = $1
 `
 
 type GetScholarshipByIDRow struct {
-	ScholarshipID   int32                 `json:"scholarship_id"`
+	ID              int32                 `json:"id"`
 	Title           string                `json:"title"`
 	Provider        string                `json:"provider"`
 	Description     sql.NullString        `json:"description"`
@@ -182,7 +182,7 @@ func (q *Queries) GetScholarshipByID(ctx context.Context, id int32) (GetScholars
 	row := q.queryRow(ctx, q.getScholarshipByIDStmt, getScholarshipByID, id)
 	var i GetScholarshipByIDRow
 	err := row.Scan(
-		&i.ScholarshipID,
+		&i.ID,
 		&i.Title,
 		&i.Provider,
 		&i.Description,
@@ -340,7 +340,6 @@ func (q *Queries) SearchScholarships(ctx context.Context, arg SearchScholarships
 }
 
 const searchScholarshipsByPrograms = `-- name: SearchScholarshipsByPrograms :many
-
 SELECT
     s.id,
     s.title,
@@ -397,50 +396,6 @@ type SearchScholarshipsByProgramsRow struct {
 	CreatedAt       sql.NullTime          `json:"created_at"`
 }
 
-// SELECT
-//
-//	s.id,
-//	s.title,
-//	s.provider,
-//	s.description,
-//	jsonb_agg(
-//	    jsonb_build_object(
-//	        'institution', inst->>'institution',
-//	        'programs_offered', filtered.programs_offered
-//	    )
-//	) AS institution_info,
-//	s.requirements,
-//	s.extra_notes,
-//	s.deadline_end,
-//	s.official_link,
-//	s.photo_url,
-//	s.created_at
-//
-// FROM scholarships s,
-// jsonb_array_elements(s.institution_info) AS inst
-// LEFT JOIN LATERAL (
-//
-//	SELECT jsonb_agg(program) AS programs_offered
-//	FROM jsonb_array_elements_text(inst->'programs_offered') AS program
-//	WHERE EXISTS (
-//	    SELECT 1
-//	    FROM unnest($1::text[]) AS pattern
-//	    WHERE
-//	        (
-//	            LENGTH(TRIM(pattern)) <= 3
-//	            AND program ~* ('\y' || pattern || '\y')
-//	        )
-//	        OR
-//	        (
-//	            LENGTH(TRIM(pattern)) > 3
-//	            AND LOWER(program) LIKE '%' || LOWER(pattern) || '%'
-//	        )
-//	)
-//
-// ) AS filtered ON true
-// WHERE filtered.programs_offered IS NOT NULL
-// GROUP BY s.id, s.title, s.provider, s.description, s.requirements, s.extra_notes, s.deadline_end, s.official_link, s.photo_url, s.created_at
-// ORDER BY s.deadline_end ASC;
 func (q *Queries) SearchScholarshipsByPrograms(ctx context.Context, dollar_1 []string) ([]SearchScholarshipsByProgramsRow, error) {
 	rows, err := q.query(ctx, q.searchScholarshipsByProgramsStmt, searchScholarshipsByPrograms, pq.Array(dollar_1))
 	if err != nil {

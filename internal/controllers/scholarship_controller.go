@@ -150,9 +150,41 @@ func (ctrl *ScholarshipController) GetScholarships(c *gin.Context) {
 		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch scholarships")
 		return
 	}
-
-	response := builder.BuildScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	response := builder.BuildAllScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
 	utils.JSONIndent(c, http.StatusOK, "List of scholarships", response)
+}
+
+func (cr *ScholarshipController) GetScholarshipByID(c *gin.Context) {
+	id, err := utils.GetIDParam(c, "id")
+	if err != nil || id <= 0 {
+		utils.JSONIndent(c, http.StatusBadRequest, "Invalid scholarship ID", nil)
+		return
+	}
+
+	scholarship, err := cr.Queries.GetScholarshipByID(c, int32(id))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
+			return
+		}
+		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch scholarship")
+		return
+	}
+
+	response := builder.BuildGetScholarshipByIDResponseFromRow(scholarship, storage.S3Client, storage.BucketName)
+
+	// Generate presigned URL if PhotoUrl is present
+	if scholarship.PhotoUrl.Valid && scholarship.PhotoUrl.String != "" {
+		url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, scholarship.PhotoUrl.String, storage.S3Client)
+		if err != nil {
+			logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
+			response.PhotoURL = nil // or keep original key
+		} else {
+			response.PhotoURL = &url
+		}
+	}
+
+	utils.JSONIndent(c, http.StatusOK, "Scholarship details", response)
 }
 
 // GetActiveScholarships godoc
@@ -172,8 +204,9 @@ func (ctrl *ScholarshipController) GetActiveScholarship(c *gin.Context) {
 		errors.SanitizedErrorResponse(c, err, http.StatusInternalServerError, "Could not fetch active scholarships")
 		return
 	}
-	// Use the interface-based builder for active scholarships
-	response := builder.BuildActiveScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+
+	response := builder.BuildActiveScholarshipResponsesFromDB(scholarships, storage.S3Client, storage.BucketName)
+
 	utils.JSONIndent(c, http.StatusOK, "List of active scholarships", response)
 }
 
@@ -340,7 +373,11 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 	}
 
 	// --- Build response using scholarship model ---
-	response := builder.MapScholarshipFromDBScholarship(scholarship)
+	response := builder.BuildScholarshipResponse(
+		builder.NewScholarshipWrapper(scholarship),
+		storage.S3Client,
+		storage.BucketName,
+	)
 
 	// Generate presigned URL if PhotoUrl is present
 	if scholarship.PhotoUrl.Valid && scholarship.PhotoUrl.String != "" {
@@ -352,6 +389,7 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 			response.PhotoURL = &url
 		}
 	}
+
 	utils.JSONIndent(c, http.StatusOK, "Scholarship updated successfully", response)
 }
 
@@ -391,6 +429,8 @@ func (ctrl *ScholarshipController) FilterByCategory(c *gin.Context) {
 		return
 	}
 
-	response := builder.BuildSearchScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	// response := builder.BuildSearchScholarshipResponses(scholarships, storage.S3Client, storage.BucketName)
+	response := builder.BuildSearchScholarshipResponsesFromDB(scholarships, storage.S3Client, storage.BucketName)
+
 	utils.JSONIndent(c, http.StatusOK, fmt.Sprintf("Found %d scholarship(s) in %s category", len(scholarships), category), response)
 }

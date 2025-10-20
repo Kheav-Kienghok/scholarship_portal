@@ -134,7 +134,12 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 		return
 	}
 
-	responses := builder.BuildScholarshipResponsesFromDB(dbScholarships, storage.S3Client, storage.BucketName)
+	wrapped := make([]builder.ScholarshipSource, len(dbScholarships))
+	for i, s := range dbScholarships {
+		wrapped[i] = builder.NewScholarshipWrapper(s)
+	}
+
+	responses := builder.BuildScholarshipResponses(wrapped, storage.S3Client, storage.BucketName)
 	utils.RespondOK(c, "Favorites fetched", models.FavoriteScholarshipListResponse{
 		Favorites: responses,
 	})

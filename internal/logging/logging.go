@@ -52,6 +52,15 @@ func Debug(message string, details ...interface{}) {
 	logMessage("DEBUG", message, details...)
 }
 
+func Errorf(format string, args ...interface{}) {
+	if logger == nil {
+		return
+	}
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	message := fmt.Sprintf(format, args...)
+	logger.Printf("[ERROR] %s - %s", timestamp, message)
+}
+
 // GinLogger returns a Gin middleware for logging endpoint info and errors
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
