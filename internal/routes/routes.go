@@ -16,28 +16,28 @@ import (
 // SetupRoutes configures all the application routes
 func SetupRoutes(router *gin.Engine, db *database.Database) {
 
-	router.Use(middlewares.ErrorHandler())
-	router.Use(gin.Recovery())
-
-	router.Use(middlewares.ETagMiddleware())
-
-	router.GET("/favicon.ico", func(c *gin.Context) {
-		c.Status(204)
-	})
-
+	// CORS MUST be the first middleware
 	config := cors.Config{
-		AllowAllOrigins:  true, // or AllowOrigins: []string{"http://localhost:3000"}
+		// AllowOrigins: []string{
+		// 	"http://localhost:5173",
+		// 	"https://eduvision.live",
+		// 	"https://www.eduvision.live",
+		// },
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "Content-Length"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
 
 	router.Use(cors.New(config))
+	router.Use(middlewares.ErrorHandler())
+	router.Use(middlewares.ETagMiddleware())
 
-	// // CORS - Allow all origins
-	// router.Use(cors.Default())
+	router.GET("/favicon.ico", func(c *gin.Context) {
+		c.Status(204)
+	})
 
 	// // CORS
 	// router.Use(cors.New(cors.Config{
