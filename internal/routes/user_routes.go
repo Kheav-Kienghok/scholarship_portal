@@ -14,20 +14,22 @@ func RegisterUserRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 	userController := controllers.UserControllerHandler(db, queries)
 	favoriteController := controllers.FavoriteControllerHandler(queries)
 
-	favoriteGroup := api.Group("/favorites")
-	favoriteGroup.Use(middlewares.RequireUserAuth())
-	{
-		favoriteGroup.GET("/", favoriteController.ListFavorites)
-		favoriteGroup.POST("/", favoriteController.AddFavorite)
-
-		favoriteGroup.DELETE("/:scholarship_id", favoriteController.RemoveFavorite)
-	}
-
 	userGroup := api.Group("/user")
 	userGroup.Use(middlewares.RequireUserAuth())
 	{
 		userGroup.GET("/profile", userController.GetProfile)
 		userGroup.PUT("/profile", userController.UpdateProfile)
 		// userGroup.PATCH("/update-profile", userController.UpdateUserAndProfile)
+
+		// User favorites
+		userGroup.GET("/favorites", favoriteController.ListFavorites)	
+	}
+
+	// Top-level favorite routes for POST / DELETE
+	favoriteGroup := api.Group("/favorite")
+	favoriteGroup.Use(middlewares.RequireUserAuth())
+	{
+		favoriteGroup.POST("/", favoriteController.AddFavorite)
+		favoriteGroup.DELETE("/:scholarship_id", favoriteController.RemoveFavorite)
 	}
 }
