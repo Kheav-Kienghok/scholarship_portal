@@ -22,11 +22,13 @@ import (
 // RegisterController handles registration requests
 type RegisterController struct {
 	Queries *db.Queries
+	DB      *sql.DB
 }
 
-func RegisterControllerHandler(queries *db.Queries) *RegisterController {
+func RegisterControllerHandler(dbConn *sql.DB, queries *db.Queries) *RegisterController {
 	return &RegisterController{
 		Queries: queries,
+		DB:      dbConn,
 	}
 }
 
@@ -75,11 +77,23 @@ func (r *RegisterController) Register(c *gin.Context) {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
-
 	if err == nil {
 		utils.JSONIndent(c, http.StatusBadRequest, "Email is already registered", nil)
 		return
 	}
+
+	// Start transaction
+	tx, err := r.DB.BeginTx(c, nil)
+	if err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to start transaction", nil)
+		return
+	}
+	defer func() {
+		// rollback if still open (i.e., not committed)
+		_ = tx.Rollback()
+	}()
+
+	qtx := r.Queries.WithTx(tx)
 
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -96,7 +110,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 		EmailVerified: sql.NullBool{Bool: false, Valid: true},
 	}
 
-	user, err := r.Queries.CreateUser(c, params)
+	user, err := qtx.CreateUser(c, params)
 	if err != nil {
 		logging.Error("DB: Failed to create user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
@@ -114,7 +128,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	// Save verification token to database
 	expiresAt := time.Now().Add(24 * time.Hour)
 
-	_, err = r.Queries.CreateEmailVerification(c, db.CreateEmailVerificationParams{
+	_, err = qtx.CreateEmailVerification(c, db.CreateEmailVerificationParams{
 		UserID:    user.ID,
 		Token:     token,
 		ExpiresAt: expiresAt,
@@ -125,16 +139,22 @@ func (r *RegisterController) Register(c *gin.Context) {
 		return
 	}
 
+	// Commit transaction first (user + token must be consistent)
+	if err := tx.Commit(); err != nil {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to commit transaction", nil)
+		return
+	}
+
 	// Generate verification link
 	verificationLink := generateVerificationLink(token)
 
 	// Uncomment this to send link
-	// err = utils.SendVerificationEmail(c, user.Email, user.Fullname.String, verificationLink)
-	// if err != nil {
-	// 	logging.Error("Failed to send verification email:", err)
-	// 	utils.JSONIndent(c, http.StatusInternalServerError, "Could not send verification email", nil)
-	// 	return
-	// }
+	err = utils.SendVerificationEmail(c, user.Email, user.Fullname.String, verificationLink)
+	if err != nil {
+		logging.Error("Failed to send verification email:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Could not send verification email", nil)
+		return
+	}
 
 	// Return success with verification link
 	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", gin.H{

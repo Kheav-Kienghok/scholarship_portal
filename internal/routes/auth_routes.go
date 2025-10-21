@@ -12,7 +12,7 @@ import (
 func RegisterAuthRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries) {
 
 	loginController := controllers.LoginControllerHandler(queries)
-	registerController := controllers.RegisterControllerHandler(queries)
+	registerController := controllers.RegisterControllerHandler(db, queries)
 	googleHandler := auth.NewGoogleAuthHandler(queries)
 
     // Create auth sub-group

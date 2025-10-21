@@ -27,7 +27,10 @@ type AdminController struct {
 }
 
 func AdminControllerHandler(dbConn *sql.DB, queries *db.Queries) *AdminController {
-	return &AdminController{Queries: queries, DB: dbConn}
+	return &AdminController{
+		Queries: queries,
+		DB:      dbConn,
+	}
 }
 
 func getEmailFromJWT(c *gin.Context) (string, error) {
@@ -90,15 +93,20 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 	if !admin.IsTwoFactor {
 		setupToken, _ := tokens.GenerateSetupToken(admin.Email)
 		utils.RespondOK(c, "Required to setup 2FA", gin.H{
-			"setup_token": setupToken,
-			"next":        "/admin/enable-2fa",
+			"is_multi_factor": false,
+			"next":            "https://eduvision.live/api/admin/enable-2fa",
+			"setup_token":     setupToken,
 		})
 		return
 	}
 
 	// 2FA enabled → issue temp token for OTP step
 	tempToken, _ := tokens.GenerateTempToken(admin.Email)
-	utils.RespondOK(c, "OTP required", gin.H{"temp_token": tempToken, "next": "/admin/verify-otp"})
+	utils.RespondOK(c, "OTP required", gin.H{
+		"is_multi_factor": true,
+		"temp_token":      tempToken,
+		"next":            "https://eduvision.live/api/admin/verify-otp",
+	})
 }
 
 func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
@@ -191,7 +199,10 @@ func (ctrl *AdminController) Enable2FAForAdmin(c *gin.Context) {
 		return
 	}
 
-	utils.RespondOK(c, "2FA enabled", gin.H{"qr_code_url": qrURL})
+	utils.RespondOK(c, "2FA enabled", gin.H{
+		"next":        "https://eduvision.live/api/admin/verify-2fa",
+		"qr_code_url": qrURL,
+	})
 }
 
 func (ctrl *AdminController) Verify2FAForAdmin(c *gin.Context) {
@@ -217,5 +228,11 @@ func (ctrl *AdminController) Verify2FAForAdmin(c *gin.Context) {
 		return
 	}
 
-	utils.RespondOK(c, "2FA verified successfully", nil)
+	token, err := tokens.GenerateAdminToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
+	if err != nil {
+		utils.RespondInternalError(c, "Could not generate token")
+		return
+	}
+
+	utils.RespondOK(c, "2FA verified successfully", gin.H{"token": token})
 }
