@@ -24,6 +24,11 @@ SELECT id, fullname, email, password_hash, email_verified, created_at, updated_a
 FROM users 
 WHERE email = $1;
 
+-- name: CheckUserExistByEmail :one
+SELECT email, email_verified 
+FROM users 
+WHERE email = $1;
+
 -- name: GetUserByID :one
 SELECT id, fullname, email, password_hash, email_verified, created_at, updated_at
 FROM users 

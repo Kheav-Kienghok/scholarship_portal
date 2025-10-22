@@ -20,13 +20,15 @@ func RegisterScholarshipRoutes(api *gin.RouterGroup, queries *importDB.Queries) 
 		scholarshipGroup.GET("/active", middlewares.ETagMiddleware(), scholarshipController.GetActiveScholarship)
 		
 		scholarshipGroup.GET("/filter", scholarshipController.FilterByCategory)
+
+		scholarshipGroup.GET("/:id", scholarshipController.GetScholarshipByID)
 	}
 	
 	// Admin only
 	admin := api.Group("/scholarships")
 	admin.Use(middlewares.RequireAdminAuth())
 	{
-		admin.GET("/:id", scholarshipController.GetScholarshipByID)
+		// admin.GET("/:id", scholarshipController.GetScholarshipByID)
 
 		admin.POST("", scholarshipController.CreateScholarship)
 		admin.DELETE("/:id", scholarshipController.DeleteScholarship)

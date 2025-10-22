@@ -10,6 +10,24 @@ import (
 	"database/sql"
 )
 
+const checkUserExistByEmail = `-- name: CheckUserExistByEmail :one
+SELECT email, email_verified 
+FROM users 
+WHERE email = $1
+`
+
+type CheckUserExistByEmailRow struct {
+	Email         string       `json:"email"`
+	EmailVerified sql.NullBool `json:"email_verified"`
+}
+
+func (q *Queries) CheckUserExistByEmail(ctx context.Context, email string) (CheckUserExistByEmailRow, error) {
+	row := q.queryRow(ctx, q.checkUserExistByEmailStmt, checkUserExistByEmail, email)
+	var i CheckUserExistByEmailRow
+	err := row.Scan(&i.Email, &i.EmailVerified)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     fullname, 

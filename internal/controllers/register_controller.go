@@ -67,21 +67,26 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	validatePassword := utils.ValidatePassword(input.Password)
 	if !validatePassword {
-		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 12 characters and include uppercase, lowercase", nil)
+		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 8 characters and include uppercase, lowercase", nil)
 		return
 	}
 
 	// Check if user already exists
-	_, err := r.Queries.GetUserByEmail(c, input.Email)
+	existingUser, err := r.Queries.CheckUserExistByEmail(c, input.Email)
 	if err != nil && err != sql.ErrNoRows {
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
-	if err == nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Email is already registered", nil)
-		return
-	}
 
+	if err == nil {
+		if existingUser.EmailVerified.Bool {
+			utils.JSONIndent(c, http.StatusBadRequest, "Email is already registered", nil)
+			return
+		} else {
+			utils.JSONIndent(c, http.StatusBadRequest, "Email is not verified yet. Please check your inbox.", nil)
+			return
+		}
+	}
 	// Start transaction
 	tx, err := r.DB.BeginTx(c, nil)
 	if err != nil {
@@ -141,7 +146,8 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	// Commit transaction first (user + token must be consistent)
 	if err := tx.Commit(); err != nil {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to commit transaction", nil)
+		logging.Error("Failed to commit transaction:", err)
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 

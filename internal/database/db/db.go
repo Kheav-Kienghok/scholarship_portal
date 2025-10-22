@@ -30,6 +30,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.adminUpdateUserTOTPSecretStmt, err = db.PrepareContext(ctx, adminUpdateUserTOTPSecret); err != nil {
 		return nil, fmt.Errorf("error preparing query AdminUpdateUserTOTPSecret: %w", err)
 	}
+	if q.checkUserExistByEmailStmt, err = db.PrepareContext(ctx, checkUserExistByEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query CheckUserExistByEmail: %w", err)
+	}
 	if q.cleanupExpiredVerificationsStmt, err = db.PrepareContext(ctx, cleanupExpiredVerifications); err != nil {
 		return nil, fmt.Errorf("error preparing query CleanupExpiredVerifications: %w", err)
 	}
@@ -178,6 +181,11 @@ func (q *Queries) Close() error {
 	if q.adminUpdateUserTOTPSecretStmt != nil {
 		if cerr := q.adminUpdateUserTOTPSecretStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing adminUpdateUserTOTPSecretStmt: %w", cerr)
+		}
+	}
+	if q.checkUserExistByEmailStmt != nil {
+		if cerr := q.checkUserExistByEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing checkUserExistByEmailStmt: %w", cerr)
 		}
 	}
 	if q.cleanupExpiredVerificationsStmt != nil {
@@ -446,6 +454,7 @@ type Queries struct {
 	tx                                       *sql.Tx
 	addFavoriteStmt                          *sql.Stmt
 	adminUpdateUserTOTPSecretStmt            *sql.Stmt
+	checkUserExistByEmailStmt                *sql.Stmt
 	cleanupExpiredVerificationsStmt          *sql.Stmt
 	createEmailVerificationStmt              *sql.Stmt
 	createOAuthLoginStmt                     *sql.Stmt
@@ -499,6 +508,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                                       tx,
 		addFavoriteStmt:                          q.addFavoriteStmt,
 		adminUpdateUserTOTPSecretStmt:            q.adminUpdateUserTOTPSecretStmt,
+		checkUserExistByEmailStmt:                q.checkUserExistByEmailStmt,
 		cleanupExpiredVerificationsStmt:          q.cleanupExpiredVerificationsStmt,
 		createEmailVerificationStmt:              q.createEmailVerificationStmt,
 		createOAuthLoginStmt:                     q.createOAuthLoginStmt,
