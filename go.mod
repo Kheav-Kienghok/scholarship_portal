@@ -22,6 +22,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.41.0
 	golang.org/x/oauth2 v0.30.0
+	golang.org/x/time v0.14.0
 )
 
 require (

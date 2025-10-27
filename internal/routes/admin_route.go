@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterAdminRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries) {
+func RegisterAdminRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries, limiter *middlewares.RateLimiter) {
 	adminController := controllers.AdminControllerHandler(db, queries)
 
 	admin := api.Group("/admin")
 	{
-		admin.POST("/login", adminController.AdminLogin)
-		admin.POST("/verify-otp", adminController.VerifyAdminOTP)
+		admin.POST("/login", limiter.Middleware(), adminController.AdminLogin)
+		admin.POST("/verify-otp", limiter.Middleware(), adminController.VerifyAdminOTP)
 
 		// Require JWT for 2FA setup and verification
 		adminAuth := admin.Group("/")

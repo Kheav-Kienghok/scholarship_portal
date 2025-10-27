@@ -39,15 +39,6 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 		c.Status(204)
 	})
 
-	// // CORS
-	// router.Use(cors.New(cors.Config{
-	// 	AllowOrigins:     []string{"http://localhost:5500"},
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// }))
-
 	// Swagger docs
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -58,11 +49,13 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	api := router.Group("/api/v1")
 	{
 		RegisterHomeRoutes(api)
-		RegisterAuthRoutes(api, db.DB, queries)
 		RegisterUserRoutes(api, db.DB, queries)
-
-		RegisterAdminRoutes(api, db.DB, queries)
-
+		
+		
 		RegisterScholarshipRoutes(api, queries)
+		
+		rateLimiter := middlewares.NewRateLimiter(10, 15, 10*time.Minute)
+		RegisterAuthRoutes(api, db.DB, queries, rateLimiter)
+		RegisterAdminRoutes(api, db.DB, queries, rateLimiter)
 	}
 }
