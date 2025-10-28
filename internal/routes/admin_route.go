@@ -2,15 +2,20 @@ package routes
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/controllers"
 	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/otpstore"
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterAdminRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Queries, limiter *middlewares.RateLimiter) {
-	adminController := controllers.AdminControllerHandler(db, queries)
+	// OTP store: max 5 attempts, 15 minutes window
+	otpStore := otpstore.NewOTPStore(3, 15*time.Minute)
+
+	adminController := controllers.AdminControllerHandler(db, queries, otpStore)
 
 	admin := api.Group("/admin")
 	{

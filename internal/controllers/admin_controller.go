@@ -11,6 +11,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/otpstore"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
@@ -22,14 +23,16 @@ import (
 )
 
 type AdminController struct {
-	Queries *db.Queries
-	DB      *sql.DB
+	Queries  *db.Queries
+	DB       *sql.DB
+	OTPStore *otpstore.OTPStore
 }
 
-func AdminControllerHandler(dbConn *sql.DB, queries *db.Queries) *AdminController {
+func AdminControllerHandler(dbConn *sql.DB, queries *db.Queries, store *otpstore.OTPStore) *AdminController {
 	return &AdminController{
-		Queries: queries,
-		DB:      dbConn,
+		Queries:  queries,
+		DB:       dbConn,
+		OTPStore: store,
 	}
 }
 
@@ -131,6 +134,14 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 		return
 	}
 
+	key := claims.GetEmail()
+
+	// check attempts
+	if _, locked := ctrl.OTPStore.Remaining(key); locked {
+		utils.RespondTooManyRequests(c, "Too many OTP attempts. Try again later", int(ctrl.OTPStore.Window().Seconds()))
+		return
+	}
+
 	admin, err := ctrl.Queries.GetAdminByEmail(c, claims.GetEmail())
 	if err != nil {
 		utils.RespondUnauthorized(c, "Incorrect credentials")
@@ -138,9 +149,19 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 	}
 
 	if err := validateAdminOTP(&admin, otpInput.OTP); err != nil {
-		utils.RespondUnauthorized(c, err.Error())
+		ctrl.OTPStore.Increment(key)
+		_, locked := ctrl.OTPStore.Remaining(key)
+		if locked {
+			utils.RespondTooManyRequests(c, "Too many OTP attempts. Try again later", int(ctrl.OTPStore.Window().Seconds()))
+			return
+		}
+		logging.Error(fmt.Sprintf("[OTP]: %s", err.Error()))
+		utils.RespondUnauthorized(c, "Invalid OTP")
 		return
 	}
+
+	// success → reset attempts
+	ctrl.OTPStore.Reset(key)
 
 	token, err := tokens.GenerateAdminToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
 	if err != nil {

@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,39 +57,18 @@ func generateVerificationToken() (string, error) {
 func (r *RegisterController) Register(c *gin.Context) {
 
 	var input models.RegisterInput
+
+	// Validate input
 	if err := c.ShouldBindJSON(&input); err != nil {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+		r.handleValidationError(c, err)
 		return
 	}
 
-	validateEmail := utils.ValidateEmail(input.Email)
-	if !validateEmail {
-		utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
+	// Check if user exists
+	if err := r.checkUserExists(c, input.Email); err != nil {
 		return
 	}
-
-	validatePassword := utils.ValidatePassword(input.Password)
-	if !validatePassword {
-		utils.JSONIndent(c, http.StatusBadRequest, "Password must be at least 8 characters and include uppercase, lowercase", nil)
-		return
-	}
-
-	// Check if user already exists
-	existingUser, err := r.Queries.CheckUserExistByEmail(c, input.Email)
-	if err != nil && err != sql.ErrNoRows {
-		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
-		return
-	}
-
-	if err == nil {
-		if existingUser.EmailVerified.Bool {
-			utils.JSONIndent(c, http.StatusBadRequest, "Email is already registered", nil)
-			return
-		} else {
-			utils.JSONIndent(c, http.StatusBadRequest, "Email is not verified yet. Please check your inbox.", nil)
-			return
-		}
-	}
+	
 	// Start transaction
 	tx, err := r.DB.BeginTx(c, nil)
 	if err != nil {
@@ -131,7 +113,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	}
 
 	// Save verification token to database
-	expiresAt := time.Now().Add(24 * time.Hour)
+	expiresAt := time.Now().Add(1 * time.Hour)
 
 	_, err = qtx.CreateEmailVerification(c, db.CreateEmailVerificationParams{
 		UserID:    user.ID,
@@ -163,11 +145,58 @@ func (r *RegisterController) Register(c *gin.Context) {
 	}
 
 	// Return success with verification link
-	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", gin.H{
-		"verification": gin.H{
-			"link": verificationLink,
-		},
-	})
+	utils.JSONIndent(c, http.StatusCreated, "Please verify your email to activate your account.", nil)
+}
+
+func (r *RegisterController) handleValidationError(c *gin.Context, err error) {
+	var ve validator.ValidationErrors
+	if errors.As(err, &ve) {
+		if len(ve) > 0 {
+			fe := ve[0]
+			switch fe.Tag() {
+			case "password":
+				utils.JSONIndent(c, http.StatusBadRequest,
+					"Password must be at least 8 chars long and include both uppercase and lowercase letters", nil)
+			case "required":
+				utils.JSONIndent(c, http.StatusBadRequest,
+					fmt.Sprintf("%s is required", fe.Field()), nil)
+			case "email":
+				utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
+			default:
+				utils.JSONIndent(c, http.StatusBadRequest,
+					fmt.Sprintf("Invalid value for field %s", fe.Field()), nil)
+			}
+			return
+		}
+	}
+
+	var ute *json.UnmarshalTypeError
+	if errors.As(err, &ute) {
+		utils.JSONIndent(c, http.StatusBadRequest,
+			fmt.Sprintf("Invalid type for field %s", ute.Field), nil)
+		return
+	}
+
+	utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
+}
+
+func (r *RegisterController) checkUserExists(c *gin.Context, email string) error {
+	existingUser, err := r.Queries.CheckUserExistByEmail(c, email)
+	if err != nil && err != sql.ErrNoRows {
+		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
+		return err
+	}
+
+	if err == nil {
+		msg := "Email is already registered"
+		if !existingUser.EmailVerified.Bool {
+			msg = "Email is not verified yet. Please check your inbox."
+		}
+		utils.JSONIndent(c, http.StatusBadRequest, msg, nil)
+		return errors.New("user exists")
+	}
+
+	return nil
 }
 
 // VerifyEmail godoc
@@ -345,14 +374,9 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 	}
 
 	// Generate verification link
-	verificationLink := generateVerificationLink(token)
+	// verificationLink := generateVerificationLink(token)
 
-	// Return success
-	utils.JSONIndent(c, http.StatusOK, "Verification email has been resent. Please check your inbox.", gin.H{
-		"verification": gin.H{
-			"link": verificationLink,
-		},
-	})
+	utils.JSONIndent(c, http.StatusOK, "Verification email has been resent. Please check your inbox.", nil)
 }
 
 // Helper function to generate verification link

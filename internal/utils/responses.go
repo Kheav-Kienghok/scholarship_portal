@@ -36,3 +36,7 @@ func RespondInvalidOTP(c *gin.Context) {
 func RespondNotFound(c *gin.Context, entity string) {
 	JSONIndent(c, 404, entity+" not found", nil)
 }
+
+func RespondTooManyRequests(c *gin.Context, message string, retryAfter int) {
+	JSONIndent(c, 429, message, nil)
+}

@@ -50,11 +50,11 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 	{
 		RegisterHomeRoutes(api)
 		RegisterUserRoutes(api, db.DB, queries)
-		
-		
+
 		RegisterScholarshipRoutes(api, queries)
-		
-		rateLimiter := middlewares.NewRateLimiter(10, 15, 10*time.Minute)
+
+		// rateLimiter := middlewares.NewRateLimiter(10, 15, 10*time.Minute)
+		rateLimiter := middlewares.NewRateLimiter(5, 10, 3*time.Minute)
 		RegisterAuthRoutes(api, db.DB, queries, rateLimiter)
 		RegisterAdminRoutes(api, db.DB, queries, rateLimiter)
 	}

@@ -1,10 +1,9 @@
 package models
 
 type RegisterInput struct {
-	Fullname    string `json:"fullname" example:"John Doe"`
-	Email       string `json:"email" example:"john.doe@example.com"`
-	Password    string `json:"password" example:"SuperSecret123"`
-	PhoneNumber string `json:"phone_number" example:"+855-17-345-6790"`
+	Fullname    string `json:"fullname" binding:"required" example:"John Doe"`
+	Email       string `json:"email" binding:"required,email" example:"john.doe@example.com"`
+	Password    string `json:"password" binding:"required,password" example:"SuperSecret123"`
 }
 
 // ResendVerificationInput represents the request body for resending verification email

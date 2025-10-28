@@ -10,6 +10,8 @@ import (
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/routes"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 // Server represents the HTTP server
@@ -17,6 +19,13 @@ type Server struct {
 	router *gin.Engine
 	port   string
 	db     *database.Database
+}
+
+func init() {
+	// Register custom validators globally before Gin starts serving requests
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		utils.RegisterCustomValidators(v)
+	}
 }
 
 // NewServer creates a new server instance

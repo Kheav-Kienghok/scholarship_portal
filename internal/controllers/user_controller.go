@@ -107,18 +107,6 @@ func (u *UserController) UpdateProfile(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID := int32(userClaims.ID)
 
-	// Validate phone number if provided
-	if input.PhoneNumber != nil && *input.PhoneNumber != "" {
-		if !utils.ValidatePhoneNumber(*input.PhoneNumber) {
-			normalized := utils.NormalizeCambodianPhone(*input.PhoneNumber)
-			if normalized == "" || !utils.ValidatePhoneNumber(normalized) {
-				utils.JSONIndent(c, http.StatusBadRequest, "Invalid phone number format", nil)
-				return
-			}
-			input.PhoneNumber = &normalized
-		}
-	}
-
 	// Start atomic transaction
 	tx, err := u.DB.BeginTx(ctx, nil)
 	if err != nil {
