@@ -93,6 +93,7 @@ SELECT
     deadline_end,
     official_link,
     photo_url,
+    categories,
     created_at
 FROM scholarships
 ORDER BY created_at DESC
@@ -109,6 +110,7 @@ type GetAllScholarshipsRow struct {
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
 	PhotoUrl        sql.NullString        `json:"photo_url"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 }
 
@@ -132,6 +134,7 @@ func (q *Queries) GetAllScholarships(ctx context.Context) ([]GetAllScholarshipsR
 			&i.DeadlineEnd,
 			&i.OfficialLink,
 			&i.PhotoUrl,
+			&i.Categories,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -159,6 +162,7 @@ SELECT
     deadline_end,
     official_link,
     photo_url,
+    categories,
     created_at
 FROM scholarships
 WHERE id = $1
@@ -175,6 +179,7 @@ type GetScholarshipByIDRow struct {
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
 	PhotoUrl        sql.NullString        `json:"photo_url"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 }
 
@@ -192,13 +197,14 @@ func (q *Queries) GetScholarshipByID(ctx context.Context, id int32) (GetScholars
 		&i.DeadlineEnd,
 		&i.OfficialLink,
 		&i.PhotoUrl,
+		&i.Categories,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getScholarshipsByIDs = `-- name: GetScholarshipsByIDs :many
-SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 FROM scholarships
 WHERE id = ANY($1::int[])
 `
@@ -223,6 +229,7 @@ func (q *Queries) GetScholarshipsByIDs(ctx context.Context, dollar_1 []int32) ([
 			&i.DeadlineEnd,
 			&i.OfficialLink,
 			&i.PhotoUrl,
+			&i.Categories,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.InstitutionCode,
@@ -241,7 +248,7 @@ func (q *Queries) GetScholarshipsByIDs(ctx context.Context, dollar_1 []int32) ([
 }
 
 const getScholarshipsByInstitutionCodeLike = `-- name: GetScholarshipsByInstitutionCodeLike :many
-SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 FROM scholarships
 WHERE institution_code ILIKE '%' || $1 || '%'
 `
@@ -266,6 +273,7 @@ func (q *Queries) GetScholarshipsByInstitutionCodeLike(ctx context.Context, code
 			&i.DeadlineEnd,
 			&i.OfficialLink,
 			&i.PhotoUrl,
+			&i.Categories,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.InstitutionCode,
@@ -284,7 +292,7 @@ func (q *Queries) GetScholarshipsByInstitutionCodeLike(ctx context.Context, code
 }
 
 const searchScholarships = `-- name: SearchScholarships :many
-SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+SELECT id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 FROM scholarships
 WHERE (institution_code ILIKE '%' || $1 || '%' OR $1 IS NULL)
   AND (institution_info->0->>'institution' ILIKE '%' || $2 || '%' OR $2 IS NULL)
@@ -322,6 +330,7 @@ func (q *Queries) SearchScholarships(ctx context.Context, arg SearchScholarships
 			&i.DeadlineEnd,
 			&i.OfficialLink,
 			&i.PhotoUrl,
+			&i.Categories,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.InstitutionCode,
@@ -444,7 +453,7 @@ UPDATE scholarships SET
     photo_url = $10,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 `
 
 type UpdateScholarshipParams struct {
@@ -485,6 +494,7 @@ func (q *Queries) UpdateScholarship(ctx context.Context, arg UpdateScholarshipPa
 		&i.DeadlineEnd,
 		&i.OfficialLink,
 		&i.PhotoUrl,
+		&i.Categories,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.InstitutionCode,
@@ -498,7 +508,7 @@ UPDATE scholarships SET
     requirements = COALESCE($3, requirements),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 `
 
 type UpdateScholarshipJSONBParams struct {
@@ -521,6 +531,7 @@ func (q *Queries) UpdateScholarshipJSONB(ctx context.Context, arg UpdateScholars
 		&i.DeadlineEnd,
 		&i.OfficialLink,
 		&i.PhotoUrl,
+		&i.Categories,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.InstitutionCode,

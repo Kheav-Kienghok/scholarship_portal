@@ -10,6 +10,7 @@ SELECT
     deadline_end,
     official_link,
     photo_url,
+    categories,
     created_at
 FROM scholarships
 ORDER BY created_at DESC;
@@ -48,6 +49,7 @@ SELECT
     deadline_end,
     official_link,
     photo_url,
+    categories,
     created_at
 FROM scholarships
 WHERE id = $1;

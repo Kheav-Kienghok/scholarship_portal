@@ -22,8 +22,9 @@ INSERT INTO scholarships (
     extra_notes,
     deadline_end,
     official_link,
+    categories,
     photo_url
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id, title, provider
 `
 
@@ -36,6 +37,7 @@ type CreateScholarshipParams struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 	PhotoUrl        sql.NullString        `json:"photo_url"`
 }
 
@@ -55,6 +57,7 @@ func (q *Queries) CreateScholarship(ctx context.Context, arg CreateScholarshipPa
 		arg.ExtraNotes,
 		arg.DeadlineEnd,
 		arg.OfficialLink,
+		arg.Categories,
 		arg.PhotoUrl,
 	)
 	var i CreateScholarshipRow
@@ -71,9 +74,10 @@ INSERT INTO scholarships (
     requirements,
     extra_notes,
     deadline_end,
-    official_link
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, created_at, updated_at, institution_code
+    official_link,
+    categories
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, title, provider, description, institution_info, requirements, extra_notes, deadline_end, official_link, photo_url, categories, created_at, updated_at, institution_code
 `
 
 type CreateScholarshipWithDetailsParams struct {
@@ -85,6 +89,7 @@ type CreateScholarshipWithDetailsParams struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 }
 
 func (q *Queries) CreateScholarshipWithDetails(ctx context.Context, arg CreateScholarshipWithDetailsParams) (Scholarship, error) {
@@ -97,6 +102,7 @@ func (q *Queries) CreateScholarshipWithDetails(ctx context.Context, arg CreateSc
 		arg.ExtraNotes,
 		arg.DeadlineEnd,
 		arg.OfficialLink,
+		arg.Categories,
 	)
 	var i Scholarship
 	err := row.Scan(
@@ -110,6 +116,7 @@ func (q *Queries) CreateScholarshipWithDetails(ctx context.Context, arg CreateSc
 		&i.DeadlineEnd,
 		&i.OfficialLink,
 		&i.PhotoUrl,
+		&i.Categories,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.InstitutionCode,

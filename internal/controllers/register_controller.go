@@ -68,7 +68,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	if err := r.checkUserExists(c, input.Email); err != nil {
 		return
 	}
-	
+
 	// Start transaction
 	tx, err := r.DB.BeginTx(c, nil)
 	if err != nil {
@@ -149,25 +149,31 @@ func (r *RegisterController) Register(c *gin.Context) {
 }
 
 func (r *RegisterController) handleValidationError(c *gin.Context, err error) {
+	// var ve validator.ValidationErrors
+	// if errors.As(err, &ve) {
+	// 	if len(ve) > 0 {
+	// 		fe := ve[0]
+	// 		switch fe.Tag() {
+	// 		case "password":
+	// 			utils.JSONIndent(c, http.StatusBadRequest,
+	// 				"Password must be at least 8 chars long and include both uppercase and lowercase letters", nil)
+	// 		case "required":
+	// 			utils.JSONIndent(c, http.StatusBadRequest,
+	// 				fmt.Sprintf("%s is required", fe.Field()), nil)
+	// 		case "email":
+	// 			utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
+	// 		default:
+	// 			utils.JSONIndent(c, http.StatusBadRequest,
+	// 				fmt.Sprintf("Invalid value for field %s", fe.Field()), nil)
+	// 		}
+	// 		return
+	// 	}
+	// }
+
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
-		if len(ve) > 0 {
-			fe := ve[0]
-			switch fe.Tag() {
-			case "password":
-				utils.JSONIndent(c, http.StatusBadRequest,
-					"Password must be at least 8 chars long and include both uppercase and lowercase letters", nil)
-			case "required":
-				utils.JSONIndent(c, http.StatusBadRequest,
-					fmt.Sprintf("%s is required", fe.Field()), nil)
-			case "email":
-				utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
-			default:
-				utils.JSONIndent(c, http.StatusBadRequest,
-					fmt.Sprintf("Invalid value for field %s", fe.Field()), nil)
-			}
-			return
-		}
+		utils.JSONIndent(c, http.StatusBadRequest, utils.TranslateValidationError(ve), nil)
+		return
 	}
 
 	var ute *json.UnmarshalTypeError

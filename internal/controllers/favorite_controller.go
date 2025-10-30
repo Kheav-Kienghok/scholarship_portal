@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"database/sql"
 	"errors"
+	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/builder"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
@@ -64,11 +67,34 @@ func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
 		ScholarshipID: int64(req.ScholarshipID),
 	})
 	if err != nil {
-		logging.Error("Failed to add favorite: ", err)
+		errMsg := err.Error()
+
+		// --- 1. Scholarship not found (foreign key violation) ---
+		if strings.Contains(errMsg, "foreign key") || strings.Contains(errMsg, "23503") {
+			utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found or no longer available", nil)
+			return
+		}
+
+		// --- 2. Duplicate favorite (unique constraint) ---
+		if strings.Contains(errMsg, "duplicate key") ||
+			strings.Contains(errMsg, "unique constraint") ||
+			strings.Contains(errMsg, "23505") {
+			utils.JSONIndent(c, http.StatusConflict, "Scholarship already added to favorites", nil)
+			return
+		}
+
+		// --- 3. General DB error ---
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
+			return
+		}
+
+		logging.Error("Failed to add favorite:", err)
 		utils.RespondInternalError(c, "Failed to add favorite")
 		return
 	}
 
+	utils.RespondOK(c, "Favorite added", nil)
 	utils.RespondOK(c, "Favorite added", nil)
 }
 

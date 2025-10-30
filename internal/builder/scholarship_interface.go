@@ -20,6 +20,7 @@ type ScholarshipSource interface {
 	GetDeadlineEnd() *time.Time
 	GetOfficialLink() *string
 	GetPhotoUrl() *string
+	GetCategories() json.RawMessage
 	GetCreatedAt() *time.Time
 	GetUpdatedAt() *time.Time
 }
@@ -38,6 +39,7 @@ type baseScholarshipWrapper struct {
 	DeadlineEnd     nullableTime
 	OfficialLink    nullableString
 	PhotoUrl        nullableString
+	Categories      nullableJSON
 	CreatedAt       nullableTime
 	UpdatedAt       nullableTime
 }
@@ -132,6 +134,12 @@ func (s baseScholarshipWrapper) GetPhotoUrl() *string {
 	}
 	return nil
 }
+func (s baseScholarshipWrapper) GetCategories() json.RawMessage {
+	if s.Categories.Valid {
+		return s.Categories.RawMessage
+	}
+	return nil
+}
 func (s baseScholarshipWrapper) GetCreatedAt() *time.Time {
 	if s.CreatedAt.Valid {
 		return &s.CreatedAt.Time
@@ -161,6 +169,7 @@ func NewScholarshipWrapper(s db.Scholarship) ScholarshipSource {
 		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
 		OfficialLink:    fromNullString(s.OfficialLink),
 		PhotoUrl:        fromNullString(s.PhotoUrl),
+		Categories:      fromNullableJSON(s.Categories.Valid, s.Categories.RawMessage),
 		CreatedAt:       fromNullTime(s.CreatedAt),
 		UpdatedAt:       fromNullTime(s.UpdatedAt),
 	}
@@ -177,6 +186,7 @@ func NewAllScholarshipsWrapper(s db.GetAllScholarshipsRow) ScholarshipSource {
 		ExtraNotes:      fromNullString(s.ExtraNotes),
 		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
 		OfficialLink:    fromNullString(s.OfficialLink),
+		Categories:      fromNullableJSON(s.Categories.Valid, s.Categories.RawMessage),
 		PhotoUrl:        fromNullString(s.PhotoUrl),
 		CreatedAt:       fromNullTime(s.CreatedAt),
 	}
@@ -226,6 +236,7 @@ func NewGetScholarshipByIDWrapper(s db.GetScholarshipByIDRow) ScholarshipSource 
 		DeadlineEnd:     fromNullTime(s.DeadlineEnd),
 		OfficialLink:    fromNullString(s.OfficialLink),
 		PhotoUrl:        fromNullString(s.PhotoUrl),
+		Categories:      fromNullableJSON(s.Categories.Valid, s.Categories.RawMessage),
 		CreatedAt:       fromNullTime(s.CreatedAt),
 	}
 }

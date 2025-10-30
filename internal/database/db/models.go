@@ -60,6 +60,7 @@ type Scholarship struct {
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
 	PhotoUrl        sql.NullString        `json:"photo_url"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 	UpdatedAt       sql.NullTime          `json:"updated_at"`
 	InstitutionCode sql.NullString        `json:"institution_code"`

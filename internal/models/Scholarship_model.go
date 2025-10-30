@@ -29,6 +29,7 @@ type ScholarshipSearchResponse struct {
 	ExtraNotes      string        `json:"extra_notes"`
 	DeadlineEnd     *DateOnly     `json:"deadline_end"`
 	OfficialLink    string        `json:"official_link"`
+	Categories      []string      `json:"categories"`
 	PhotoURL        string        `json:"photo_url"`
 	CreatedAt       DateOnly      `json:"created_at"`
 }
@@ -56,6 +57,7 @@ type ScholarshipResponse struct {
 	OfficialLink    *string         `json:"official_link,omitempty"`
 	DeadlineEnd     *DateOnly       `json:"deadline_end,omitempty"`
 	PhotoURL        *string         `json:"photo_url,omitempty"`
+	Categories      json.RawMessage `json:"categories,omitempty"`
 	CreatedAt       DateOnly        `json:"created_at"`
 	UpdatedAt       *DateOnly       `json:"updated_at,omitempty"`
 }

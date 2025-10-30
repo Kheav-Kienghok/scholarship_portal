@@ -51,6 +51,7 @@ func BuildScholarshipResponse(
 		ExtraNotes:      source.GetExtraNotes(),
 		DeadlineEnd:     toDateOnly(source.GetDeadlineEnd()),
 		OfficialLink:    source.GetOfficialLink(),
+		Categories:      source.GetCategories(),
 		CreatedAt:       toDateOnlyValue(source.GetCreatedAt()),
 		UpdatedAt:       toDateOnly(source.GetUpdatedAt()),
 	}
@@ -98,17 +99,16 @@ func BuildAllScholarshipResponses(
 	return BuildScholarshipResponses(sources, s3Client, bucketName)
 }
 
-
 func BuildScholarshipResponsesFromDB(
-    scholarships []db.Scholarship,
-    s3Client *s3.Client,
-    bucketName string,
+	scholarships []db.Scholarship,
+	s3Client *s3.Client,
+	bucketName string,
 ) []models.ScholarshipResponse {
-    wrapped := make([]ScholarshipSource, len(scholarships))
-    for i, s := range scholarships {
-        wrapped[i] = NewScholarshipWrapper(s)
-    }
-    return BuildScholarshipResponses(wrapped, s3Client, bucketName)
+	wrapped := make([]ScholarshipSource, len(scholarships))
+	for i, s := range scholarships {
+		wrapped[i] = NewScholarshipWrapper(s)
+	}
+	return BuildScholarshipResponses(wrapped, s3Client, bucketName)
 }
 
 func BuildActiveScholarshipResponsesFromDB(
@@ -118,28 +118,27 @@ func BuildActiveScholarshipResponsesFromDB(
 ) []models.ScholarshipResponse {
 	wrapped := make([]ScholarshipSource, len(scholarships))
 	for i, s := range scholarships {
-		wrapped[i] = NewActiveScholarshipWrapper(s) 
+		wrapped[i] = NewActiveScholarshipWrapper(s)
 	}
 	return BuildScholarshipResponses(wrapped, s3Client, bucketName)
 }
 
 func BuildGetScholarshipByIDResponseFromRow(
-    scholarship db.GetScholarshipByIDRow,
-    s3Client *s3.Client,
-    bucketName string,
+	scholarship db.GetScholarshipByIDRow,
+	s3Client *s3.Client,
+	bucketName string,
 ) models.ScholarshipResponse {
-    return BuildScholarshipResponse(NewGetScholarshipByIDWrapper(scholarship), s3Client, bucketName)
+	return BuildScholarshipResponse(NewGetScholarshipByIDWrapper(scholarship), s3Client, bucketName)
 }
 
 func BuildSearchScholarshipResponsesFromDB(
-    rows []db.SearchScholarshipsByProgramsRow,
-    s3Client *s3.Client,
-    bucketName string,
+	rows []db.SearchScholarshipsByProgramsRow,
+	s3Client *s3.Client,
+	bucketName string,
 ) []models.ScholarshipResponse {
-    wrapped := make([]ScholarshipSource, len(rows))
-    for i, s := range rows {
-        wrapped[i] = NewSearchScholarshipWrapper(s)
-    }
-    return BuildScholarshipResponses(wrapped, s3Client, bucketName)
+	wrapped := make([]ScholarshipSource, len(rows))
+	for i, s := range rows {
+		wrapped[i] = NewSearchScholarshipWrapper(s)
+	}
+	return BuildScholarshipResponses(wrapped, s3Client, bucketName)
 }
-

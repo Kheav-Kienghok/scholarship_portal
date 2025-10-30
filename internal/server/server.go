@@ -21,24 +21,17 @@ type Server struct {
 	db     *database.Database
 }
 
-func init() {
-	// Register custom validators globally before Gin starts serving requests
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		utils.RegisterCustomValidators(v)
-	}
-}
-
 // NewServer creates a new server instance
 func NewServer(port string, db *database.Database) *Server {
 
 	router := gin.New()
 	_ = router.SetTrustedProxies(nil)
+	router.Use(gin.Recovery(), logging.GinLogger(), middlewares.RequestLogger())
 
-	// Add recovery middleware first
-	router.Use(gin.Recovery())
-
-	router.Use(logging.GinLogger())
-	router.Use(middlewares.RequestLogger()) // Add your custom middleware here
+	// Initialize validator
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		_ = utils.InitValidator(v)
+	}
 
 	// Setup routes (CORS is configured in routes.go)
 	routes.SetupRoutes(router, db)

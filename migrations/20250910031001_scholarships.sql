@@ -11,6 +11,7 @@ CREATE TABLE scholarships (
     deadline_end DATE,
     official_link VARCHAR(255),
     photo_url TEXT,
+    categories JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );  
