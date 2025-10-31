@@ -43,7 +43,8 @@ type CreateScholarshipRequest struct {
 	ExtraNotes      *string         `form:"extra_notes" json:"extra_notes"`
 	DeadlineEnd     *string         `form:"deadline_end" json:"deadline_end"`
 	OfficialLink    *string         `form:"official_link" json:"official_link"`
-	PhotoURL        *string         `form:"photo_url" json:"photo_url"` // new field
+	Categories      json.RawMessage `form:"categories" json:"categories"`
+	PhotoURL        *string         `form:"photo_url" json:"photo_url"`
 }
 
 type ScholarshipResponse struct {

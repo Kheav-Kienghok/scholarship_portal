@@ -9,7 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var logger *log.Logger
+var (
+	logger  *log.Logger
+	logChan = make(chan string, 1000) // Buffer size as needed
+)
 
 // InitLogger initializes a single log file
 func InitLogger() error {
@@ -38,6 +41,11 @@ func logMessage(level, message string, details ...interface{}) {
 
 func Info(message string, details ...interface{}) {
 	logMessage("INFO", message, details...)
+	select {
+	case logChan <- "[INFO] " + message:
+	default:
+		// Drop log if channel is full to avoid blocking
+	}
 }
 
 func Warn(message string, details ...interface{}) {
@@ -59,6 +67,19 @@ func Errorf(format string, args ...interface{}) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	message := fmt.Sprintf(format, args...)
 	logger.Printf("[ERROR] %s - %s", timestamp, message)
+}
+
+// InitAsyncLogger initializes the asynchronous logger
+func InitAsyncLogger(logFile string) {
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	go func() {
+		for msg := range logChan {
+			f.WriteString(msg + "\n")
+		}
+	}()
 }
 
 // GinLogger returns a Gin middleware for logging endpoint info and errors

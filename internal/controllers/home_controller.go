@@ -24,3 +24,4 @@ func (h *HomeController) GetHome(c *gin.Context) {
 		"status":  "success",
 	})
 }
+

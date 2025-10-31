@@ -48,17 +48,15 @@ func (d *Database) Connect() error {
 
 // setupConnectionPool configures connection pool settings
 func (d *Database) setupConnectionPool(db *sql.DB) {
-	// Set maximum number of open connections (conservative for containers)
-	db.SetMaxOpenConns(25)
 
-	// Set maximum number of idle connections
-	db.SetMaxIdleConns(5)
-
-	// Set maximum lifetime of connections (prevent stale connections)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	// Set maximum idle time (Go 1.15+) - close idle connections quickly
-	db.SetConnMaxIdleTime(1 * time.Minute)
+	// db.SetMaxOpenConns(25)
+	// db.SetMaxIdleConns(5)
+	// db.SetConnMaxLifetime(5 * time.Minute)
+	// db.SetConnMaxIdleTime(1 * time.Minute)
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(20)
+	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 
 	logging.Info("Connection pool configured: MaxOpen=25, MaxIdle=5, MaxLifetime=5m, MaxIdleTime=1m")
 }

@@ -81,14 +81,14 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 			if v.violations >= rl.maxViolations {
 				v.lockedUntil = time.Now().Add(rl.lockoutDuration)
 				rl.mu.Unlock()
-                utils.JSONIndent(c, 429, "Too many rate limit violations. Account locked for 3 hours.", nil)
+				utils.JSONIndent(c, 429, "Too many rate limit violations. Account locked for 3 hours.", nil)
 				c.Abort()
 				return
 			}
 			rl.mu.Unlock()
 
-            c.Header("Retry-After", rl.retryAfter(limiter))
-            utils.JSONIndent(c, 429, "Rate limit exceeded", nil)
+			c.Header("Retry-After", rl.retryAfter(limiter))
+			utils.JSONIndent(c, 429, "Rate limit exceeded", nil)
 
 			c.Abort()
 			return

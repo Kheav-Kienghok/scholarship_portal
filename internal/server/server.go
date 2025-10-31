@@ -3,12 +3,14 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/middlewares"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/routes"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -27,6 +29,9 @@ func NewServer(port string, db *database.Database) *Server {
 	router := gin.New()
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), logging.GinLogger(), middlewares.RequestLogger())
+
+	// Enable gzip compression
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	// Initialize validator
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -50,6 +55,13 @@ func NewServer(port string, db *database.Database) *Server {
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	logging.Info(fmt.Sprintf("Server starting on port %s", s.port))
-	return s.router.Run(":" + s.port)
+    srv := &http.Server{
+        Addr:    ":" + s.port,
+        Handler: s.router,
+        ReadTimeout:  5 * time.Second,
+        WriteTimeout: 10 * time.Second,
+        IdleTimeout:  60 * time.Second,
+    }
+    logging.Info(fmt.Sprintf("Server starting on port %s", s.port))
+    return srv.ListenAndServe()
 }

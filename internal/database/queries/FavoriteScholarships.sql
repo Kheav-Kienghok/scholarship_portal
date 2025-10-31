@@ -2,7 +2,7 @@
 -- name: AddFavorite :exec
 INSERT INTO favorite_scholarships (user_id, scholarship_id)
 VALUES ($1, $2)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (user_id, scholarship_id) DO NOTHING;
 
 -- Remove a favorite
 -- name: RemoveFavorite :exec
@@ -21,6 +21,7 @@ SELECT
     s.extra_notes,
     s.deadline_end,
     s.official_link,
+    s.categories,
     s.photo_url,
     s.created_at
 FROM favorite_scholarships f

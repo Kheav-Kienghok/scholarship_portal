@@ -1,16 +1,18 @@
 package controllers
 
 import (
-	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/builder"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/models"
+	"github.com/Kheav-Kienghok/scholarship_portal/internal/otpstore"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/storage"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/tokens"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/utils"
@@ -18,11 +20,15 @@ import (
 )
 
 type FavoriteController struct {
-	Queries *db.Queries
+	Queries       *db.Queries
+	ActionLimiter *otpstore.OTPStore
 }
 
 func FavoriteControllerHandler(queries *db.Queries) *FavoriteController {
-	return &FavoriteController{Queries: queries}
+	return &FavoriteController{
+		Queries:       queries,
+		ActionLimiter: otpstore.NewOTPStore(10, 1*time.Minute), // Max 10 actions per minute
+	}
 }
 
 // getUserIDFromClaims extracts the user ID from claims in Gin context
@@ -49,11 +55,34 @@ func (ctrl *FavoriteController) getUserIDOrAbort(c *gin.Context) int64 {
 	return userID
 }
 
+func (ctrl *FavoriteController) checkActionLimit(c *gin.Context, userID int64, action string) bool {
+	key := fmt.Sprintf("fav:%s:%d", action, userID)
+
+	remaining, locked := ctrl.ActionLimiter.Remaining(key)
+	if locked {
+		utils.RespondTooManyRequests(c, "Too many favorite actions. Please wait.",
+			int(ctrl.ActionLimiter.Window().Seconds()))
+		return false
+	}
+
+	if remaining <= 2 {
+		logging.Warn(fmt.Sprintf("User %d approaching rate limit for %s: %d remaining", userID, action, remaining))
+	}
+
+	ctrl.ActionLimiter.Increment(key)
+	return true
+}
+
 // AddFavorite adds a scholarship to the user's favorites
 func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
 
 	userID := ctrl.getUserIDOrAbort(c)
 	if userID == 0 {
+		return
+	}
+
+	// Check rate limit
+	if !ctrl.checkActionLimit(c, userID, "add") {
 		return
 	}
 
@@ -75,26 +104,12 @@ func (ctrl *FavoriteController) AddFavorite(c *gin.Context) {
 			return
 		}
 
-		// --- 2. Duplicate favorite (unique constraint) ---
-		if strings.Contains(errMsg, "duplicate key") ||
-			strings.Contains(errMsg, "unique constraint") ||
-			strings.Contains(errMsg, "23505") {
-			utils.JSONIndent(c, http.StatusConflict, "Scholarship already added to favorites", nil)
-			return
-		}
-
-		// --- 3. General DB error ---
-		if errors.Is(err, sql.ErrNoRows) {
-			utils.JSONIndent(c, http.StatusNotFound, "Scholarship not found", nil)
-			return
-		}
-
-		logging.Error("Failed to add favorite:", err)
+		go logging.Error("Failed to add favorite:", err)
 		utils.RespondInternalError(c, "Failed to add favorite")
 		return
 	}
 
-	utils.RespondOK(c, "Favorite added", nil)
+	go logging.Info(fmt.Sprintf("User %d added favorite %d", userID, req.ScholarshipID))
 	utils.RespondOK(c, "Favorite added", nil)
 }
 
@@ -103,6 +118,11 @@ func (ctrl *FavoriteController) RemoveFavorite(c *gin.Context) {
 
 	userID := ctrl.getUserIDOrAbort(c)
 	if userID == 0 {
+		return
+	}
+
+	// Check rate limit
+	if !ctrl.checkActionLimit(c, userID, "remove") {
 		return
 	}
 
@@ -118,6 +138,7 @@ func (ctrl *FavoriteController) RemoveFavorite(c *gin.Context) {
 		ScholarshipID: int64(scholarshipID),
 	})
 	if err != nil {
+		logging.Error("Failed to remove favorite:", err)
 		utils.RespondInternalError(c, "Failed to remove favorite")
 		return
 	}

@@ -40,9 +40,7 @@ func init() {
 // @name Authorization
 func main() {
 	// Initialize logger
-	if err := logging.InitLogger(); err != nil {
-		log.Fatal("Failed to initialize logger:", err)
-	}
+	logging.InitAsyncLogger("logs/app.log")
 
 	// Initialize cache
 	cache.InitCache()

@@ -15,7 +15,7 @@ import (
 const addFavorite = `-- name: AddFavorite :exec
 INSERT INTO favorite_scholarships (user_id, scholarship_id)
 VALUES ($1, $2)
-ON CONFLICT DO NOTHING
+ON CONFLICT (user_id, scholarship_id) DO NOTHING
 `
 
 type AddFavoriteParams struct {
@@ -40,6 +40,7 @@ SELECT
     s.extra_notes,
     s.deadline_end,
     s.official_link,
+    s.categories,
     s.photo_url,
     s.created_at
 FROM favorite_scholarships f
@@ -58,6 +59,7 @@ type ListFavoritesByUserRow struct {
 	ExtraNotes      sql.NullString        `json:"extra_notes"`
 	DeadlineEnd     sql.NullTime          `json:"deadline_end"`
 	OfficialLink    sql.NullString        `json:"official_link"`
+	Categories      pqtype.NullRawMessage `json:"categories"`
 	PhotoUrl        sql.NullString        `json:"photo_url"`
 	CreatedAt       sql.NullTime          `json:"created_at"`
 }
@@ -82,6 +84,7 @@ func (q *Queries) ListFavoritesByUser(ctx context.Context, userID int64) ([]List
 			&i.ExtraNotes,
 			&i.DeadlineEnd,
 			&i.OfficialLink,
+			&i.Categories,
 			&i.PhotoUrl,
 			&i.CreatedAt,
 		); err != nil {

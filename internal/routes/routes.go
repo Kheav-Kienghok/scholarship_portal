@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/database"
@@ -37,6 +38,10 @@ func SetupRoutes(router *gin.Engine, db *database.Database) {
 
 	router.GET("/favicon.ico", func(c *gin.Context) {
 		c.Status(204)
+	})
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	// Swagger docs

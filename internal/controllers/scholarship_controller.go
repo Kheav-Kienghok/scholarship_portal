@@ -109,7 +109,7 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		utils.JSONIndent(c, http.StatusBadRequest, "DeadlineEnd is required", nil)
 		return
 	}
-
+	
 	// Save to DB
 	scholarship, err := ctrl.Queries.CreateScholarship(c, db.CreateScholarshipParams{
 		Title:           input.Title,
@@ -121,6 +121,7 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		DeadlineEnd:     utils.ToNullTime(*input.DeadlineEnd),
 		OfficialLink:    utils.ToNullString(input.OfficialLink),
 		PhotoUrl:        utils.ToNullString(input.PhotoURL),
+		Categories:      utils.ToNullRawMessage(input.Categories),
 	})
 	if err != nil {
 		logging.Error("Failed to create scholarship: ", err)
