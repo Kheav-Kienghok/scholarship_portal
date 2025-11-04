@@ -71,6 +71,11 @@ func Errorf(format string, args ...interface{}) {
 
 // InitAsyncLogger initializes the asynchronous logger
 func InitAsyncLogger(logFile string) {
+    // Ensure the directory exists
+    dir := "logs"
+    if err := os.MkdirAll(dir, 0755); err != nil {
+        log.Fatal("Failed to create logs directory:", err)
+    }
     f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
     if err != nil {
         log.Fatal(err)
