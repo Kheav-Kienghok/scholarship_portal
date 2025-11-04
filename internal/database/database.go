@@ -58,7 +58,7 @@ func (d *Database) setupConnectionPool(db *sql.DB) {
 	db.SetConnMaxLifetime(10 * time.Minute)
 	db.SetConnMaxIdleTime(5 * time.Minute)
 
-	logging.Info("Connection pool configured: MaxOpen=25, MaxIdle=5, MaxLifetime=5m, MaxIdleTime=1m")
+	go logging.Info("Connection pool configured: MaxOpen=25, MaxIdle=5, MaxLifetime=5m, MaxIdleTime=1m")
 }
 
 // pingWithRetry attempts to ping the database with retry logic

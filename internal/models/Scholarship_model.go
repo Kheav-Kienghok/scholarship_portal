@@ -75,3 +75,11 @@ type UpdateScholarshipRequest struct {
 	PhotoURL        *string         `json:"photo_url,omitempty"`
 	DeadlineEnd     *string         `json:"deadline_end,omitempty"`
 }
+
+type ReminderData struct {
+    Name            string `json:"name"`
+    Email           string `json:"email"`
+    ScholarshipName string `json:"scholarship_name"`
+    Deadline        string `json:"deadline"`
+    ApplyLink       string `json:"apply_link"`
+}

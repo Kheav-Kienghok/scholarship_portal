@@ -45,7 +45,7 @@ func JWTAuth(allowedRolesOrPurposes ...string) gin.HandlerFunc {
 		} else if serviceClaims, err := tokens.ParseTempToken(tokenStr); err == nil {
 			claims = serviceClaims
 		} else {
-			logging.Error("Failed to parse token: ", err)
+			go logging.Error("Failed to parse token: ", err)
 			utils.JSONIndent(c, http.StatusUnauthorized, "Invalid token", nil)
 			c.Abort()
 			return

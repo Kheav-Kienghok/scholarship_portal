@@ -71,15 +71,16 @@ func Errorf(format string, args ...interface{}) {
 
 // InitAsyncLogger initializes the asynchronous logger
 func InitAsyncLogger(logFile string) {
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	go func() {
-		for msg := range logChan {
-			f.WriteString(msg + "\n")
-		}
-	}()
+    f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+    go func() {
+        for msg := range logChan {
+            timestamp := time.Now().Format("2006-01-02 15:04:05")
+            f.WriteString(fmt.Sprintf("%s %s\n", timestamp, msg))
+        }
+    }()
 }
 
 // GinLogger returns a Gin middleware for logging endpoint info and errors

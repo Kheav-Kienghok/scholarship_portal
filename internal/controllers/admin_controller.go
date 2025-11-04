@@ -93,15 +93,15 @@ func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 		return
 	}
 
-	// Uncomment this
-	token, err := tokens.GenerateAdminToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
-	if err != nil {
-		utils.RespondInternalError(c, "Could not generate token")
-		return
-	}
+	// // Uncomment this
+	// token, err := tokens.GenerateAdminToken(admin.ID, admin.Fullname.String, admin.Email, "admin")
+	// if err != nil {
+	// 	utils.RespondInternalError(c, "Could not generate token")
+	// 	return
+	// }
 
-	utils.RespondOK(c, "Login successful", gin.H{"token": token})
-	return
+	// utils.RespondOK(c, "Login successful", gin.H{"token": token})
+	// return
 
 	if !admin.IsTwoFactor {
 		setupToken, _ := tokens.GenerateSetupToken(admin.Email)

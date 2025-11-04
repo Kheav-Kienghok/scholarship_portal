@@ -39,20 +39,6 @@ func SendVerificationEmail(ctx context.Context, email, name, verifyLink string) 
 
 	logging.Info(fmt.Sprintf("Attempting to send email to %s via %s", email, apiURL))
 
-	// // Load AWS config
-	// cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	// if err != nil {
-	// 	logging.Error("Failed to load AWS config:", err)
-	// 	return fmt.Errorf("failed to load AWS config: %w", err)
-	// }
-
-	// // Resolve AWS credentials for signing
-	// creds, err := cfg.Credentials.Retrieve(ctx)
-	// if err != nil {
-	// 	logging.Error("Failed to retrieve AWS credentials:", err)
-	// 	return fmt.Errorf("failed to retrieve AWS credentials: %w", err)
-	// }
-
 	// Build the JSON payload
 	payload := VerificationRequest{
 		Email:      email,
@@ -63,10 +49,6 @@ func SendVerificationEmail(ctx context.Context, email, name, verifyLink string) 
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
-
-	// Calculate SHA256 hash of the payload for SigV4
-	// hash := sha256.Sum256(jsonBody)
-	// payloadHash := hex.EncodeToString(hash[:])
 
 	// Retry logic with exponential backoff
 	var lastErr error
@@ -81,12 +63,6 @@ func SendVerificationEmail(ctx context.Context, email, name, verifyLink string) 
 
 		// Set headers BEFORE signing (API key must be added AFTER signing)
 		req.Header.Set("Content-Type", "application/json")
-
-		// // Sign the request with AWS SigV4 (DO NOT include x-api-key in signature)
-		// signer := v4.NewSigner()
-		// if err := signer.SignHTTP(ctx, creds, req, payloadHash, "execute-api", region, time.Now()); err != nil {
-		// 	return fmt.Errorf("failed to sign HTTP request: %w", err)
-		// }
 
 		// Add API key AFTER signing (not part of the signature)
 		if apiKey != "" {

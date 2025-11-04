@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -21,6 +22,33 @@ type Server struct {
 	router *gin.Engine
 	port   string
 	db     *database.Database
+	cancel context.CancelFunc
+}
+
+type fakeReminderStore struct{}
+
+func (f *fakeReminderStore) GetPendingReminders(ctx context.Context) ([]utils.ReminderRequest, error) {
+	return []utils.ReminderRequest{
+		{
+			Name:            "Test Student 1",
+			Email:           "kheavkienghok@gmail.com",
+			ScholarshipName: "Tech Excellence Award",
+			Deadline:        time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+			ApplyLink:       "https://test-university.edu/tech",
+		},
+		{
+			Name:            "Test Student 2",
+			Email:           "khievkeanghok@gmail.com",
+			ScholarshipName: "Science Research Grant",
+			Deadline:        time.Date(2025, 11, 15, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+			ApplyLink:       "https://test-university.edu/science",
+		},
+	}, nil
+}
+
+func (f *fakeReminderStore) MarkReminderSent(ctx context.Context, id int64) error {
+	// No-op for fake
+	return nil
 }
 
 // NewServer creates a new server instance
@@ -45,23 +73,31 @@ func NewServer(port string, db *database.Database) *Server {
 	router.NoRoute(func(c *gin.Context) {
 		utils.JSONIndent(c, http.StatusNotFound, "404 Not Found", nil)
 	})
-
+	// --- START REMINDER CRON HERE ---
+	ctx, cancel := context.WithCancel(context.Background())
+	// store cancel to allow stopping the reminder goroutine when server shuts down
+	// reminderStore := db.Queries
+	reminderStore := &fakeReminderStore{}              // use the fake store for testing
+	utils.StartDailyEmailCheck(ctx, reminderStore, "") // "" for every minute (testing)
+	// --- END REMINDER CRON ---
+	// --- END REMINDER CRON ---
 	return &Server{
 		router: router,
 		port:   port,
 		db:     db,
+		cancel: cancel,
 	}
 }
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-    srv := &http.Server{
-        Addr:    ":" + s.port,
-        Handler: s.router,
-        ReadTimeout:  5 * time.Second,
-        WriteTimeout: 10 * time.Second,
-        IdleTimeout:  60 * time.Second,
-    }
-    logging.Info(fmt.Sprintf("Server starting on port %s", s.port))
-    return srv.ListenAndServe()
+	srv := &http.Server{
+		Addr:         ":" + s.port,
+		Handler:      s.router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	logging.Info(fmt.Sprintf("Server starting on port %s", s.port))
+	return srv.ListenAndServe()
 }
