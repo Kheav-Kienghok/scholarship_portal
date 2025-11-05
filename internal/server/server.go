@@ -78,7 +78,7 @@ func NewServer(port string, db *database.Database) *Server {
 	// store cancel to allow stopping the reminder goroutine when server shuts down
 	// reminderStore := db.Queries
 	reminderStore := &fakeReminderStore{}              // use the fake store for testing
-	utils.StartDailyEmailCheck(ctx, reminderStore, "") // "" for every minute (testing)
+	utils.StartDailyEmailCheck(ctx, reminderStore,  "0 8 * * *") // at 8:00:00 every day”
 	// --- END REMINDER CRON ---
 	// --- END REMINDER CRON ---
 	return &Server{
