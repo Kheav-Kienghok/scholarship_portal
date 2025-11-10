@@ -16,9 +16,10 @@ import (
 
 // ReminderRequest is the payload for sending reminder emails
 type ReminderRequest struct {
-	FullName        string `json:"full_name"`
+	FullName        string `json:"name"`
 	Email           string `json:"email"`
 	ScholarshipName string `json:"scholarship_name"`
+	Description     string `json:"description"`
 	Deadline        string `json:"deadline"`
 	ApplyLink       string `json:"apply_link"`
 }
@@ -91,7 +92,6 @@ func SendReminderEmail(ctx context.Context, reminder ReminderRequest) error {
 	return lastErr
 }
 
-// StartDailyEmailCheck schedules daily reminders (or every minute for testing)
 func StartDailyEmailCheck(ctx context.Context, store ReminderStore, schedule string) {
 	if schedule == "" {
 		schedule = "* * * * *" // every minute for testing

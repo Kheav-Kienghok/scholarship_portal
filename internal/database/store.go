@@ -13,7 +13,7 @@ type SqlcReminderStore struct {
 }
 
 func NewReminderStore(db *Database) *SqlcReminderStore {
-    return &SqlcReminderStore{queries: db.Queries}
+	return &SqlcReminderStore{queries: db.Queries}
 }
 
 func (s *SqlcReminderStore) GetPendingReminders(ctx context.Context) ([]utils.ReminderRequest, error) {
@@ -28,6 +28,7 @@ func (s *SqlcReminderStore) GetPendingReminders(ctx context.Context) ([]utils.Re
 			FullName:        r.Fullname.String,
 			Email:           r.Email.String,
 			ScholarshipName: r.Title.String,
+			Description:     r.Description.String,
 			Deadline:        r.DeadlineEnd.Time.Format("2006-01-02"),
 			ApplyLink:       r.OfficialLink.String,
 		})
