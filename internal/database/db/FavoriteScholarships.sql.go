@@ -29,6 +29,63 @@ func (q *Queries) AddFavorite(ctx context.Context, arg AddFavoriteParams) error 
 	return err
 }
 
+const getRemindersForToday = `-- name: GetRemindersForToday :many
+SELECT 
+    u.fullname,
+    u.email,
+    s.title,
+    s.description,
+    s.deadline_end,
+    s.official_link,
+    fs.is_reminder
+FROM favorite_scholarships fs
+LEFT JOIN users u 
+    ON u.id = fs.user_id
+LEFT JOIN scholarships s
+    ON s.id = fs.scholarship_id
+`
+
+type GetRemindersForTodayRow struct {
+	Fullname     sql.NullString `json:"fullname"`
+	Email        sql.NullString `json:"email"`
+	Title        sql.NullString `json:"title"`
+	Description  sql.NullString `json:"description"`
+	DeadlineEnd  sql.NullTime   `json:"deadline_end"`
+	OfficialLink sql.NullString `json:"official_link"`
+	IsReminder   sql.NullBool   `json:"is_reminder"`
+}
+
+func (q *Queries) GetRemindersForToday(ctx context.Context) ([]GetRemindersForTodayRow, error) {
+	rows, err := q.query(ctx, q.getRemindersForTodayStmt, getRemindersForToday)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRemindersForTodayRow
+	for rows.Next() {
+		var i GetRemindersForTodayRow
+		if err := rows.Scan(
+			&i.Fullname,
+			&i.Email,
+			&i.Title,
+			&i.Description,
+			&i.DeadlineEnd,
+			&i.OfficialLink,
+			&i.IsReminder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFavoritesByUser = `-- name: ListFavoritesByUser :many
 SELECT 
     s.id AS scholarship_id,

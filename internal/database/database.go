@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	importDB "github.com/Kheav-Kienghok/scholarship_portal/internal/database/db"
 	"github.com/Kheav-Kienghok/scholarship_portal/internal/logging"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/pressly/goose/v3"
@@ -16,6 +17,7 @@ import (
 type Database struct {
 	ConnString string
 	DB         *sql.DB
+	Queries    *importDB.Queries
 }
 
 // NewDatabase creates a new database instance
@@ -42,6 +44,8 @@ func (d *Database) Connect() error {
 	}
 
 	d.DB = db
+	d.Queries = importDB.New(db)
+
 	logging.Info("Database connection established")
 	return nil
 }

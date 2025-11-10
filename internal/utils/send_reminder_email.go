@@ -16,7 +16,7 @@ import (
 
 // ReminderRequest is the payload for sending reminder emails
 type ReminderRequest struct {
-	Name            string `json:"name"`
+	FullName        string `json:"full_name"`
 	Email           string `json:"email"`
 	ScholarshipName string `json:"scholarship_name"`
 	Deadline        string `json:"deadline"`

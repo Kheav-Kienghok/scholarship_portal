@@ -28,3 +28,18 @@ FROM favorite_scholarships f
 JOIN scholarships s ON f.scholarship_id = s.id
 WHERE f.user_id = $1
 ORDER BY f.created_at DESC;
+
+-- name: GetRemindersForToday :many
+SELECT 
+    u.fullname,
+    u.email,
+    s.title,
+    s.description,
+    s.deadline_end,
+    s.official_link,
+    fs.is_reminder
+FROM favorite_scholarships fs
+LEFT JOIN users u 
+    ON u.id = fs.user_id
+LEFT JOIN scholarships s
+    ON s.id = fs.scholarship_id;

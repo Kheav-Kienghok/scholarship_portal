@@ -16,9 +16,7 @@ func InitCache() {
         defer ticker.Stop()
 
         for range ticker.C {
-            logging.Info("Running cache cleanup...")
             URLCache.CleanExpired()
-            logging.Info("Cache cleanup completed. Current size:", URLCache.Size())
         }
     }()
 

@@ -102,6 +102,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getOAuthLoginsByUserIDStmt, err = db.PrepareContext(ctx, getOAuthLoginsByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetOAuthLoginsByUserID: %w", err)
 	}
+	if q.getRemindersForTodayStmt, err = db.PrepareContext(ctx, getRemindersForToday); err != nil {
+		return nil, fmt.Errorf("error preparing query GetRemindersForToday: %w", err)
+	}
 	if q.getScholarshipByIDStmt, err = db.PrepareContext(ctx, getScholarshipByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetScholarshipByID: %w", err)
 	}
@@ -303,6 +306,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getOAuthLoginsByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getRemindersForTodayStmt != nil {
+		if cerr := q.getRemindersForTodayStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getRemindersForTodayStmt: %w", cerr)
+		}
+	}
 	if q.getScholarshipByIDStmt != nil {
 		if cerr := q.getScholarshipByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getScholarshipByIDStmt: %w", cerr)
@@ -478,6 +486,7 @@ type Queries struct {
 	getLatestVerificationByEmailStmt         *sql.Stmt
 	getOAuthLoginByProviderStmt              *sql.Stmt
 	getOAuthLoginsByUserIDStmt               *sql.Stmt
+	getRemindersForTodayStmt                 *sql.Stmt
 	getScholarshipByIDStmt                   *sql.Stmt
 	getScholarshipsByIDsStmt                 *sql.Stmt
 	getScholarshipsByInstitutionCodeLikeStmt *sql.Stmt
@@ -532,6 +541,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getLatestVerificationByEmailStmt:         q.getLatestVerificationByEmailStmt,
 		getOAuthLoginByProviderStmt:              q.getOAuthLoginByProviderStmt,
 		getOAuthLoginsByUserIDStmt:               q.getOAuthLoginsByUserIDStmt,
+		getRemindersForTodayStmt:                 q.getRemindersForTodayStmt,
 		getScholarshipByIDStmt:                   q.getScholarshipByIDStmt,
 		getScholarshipsByIDsStmt:                 q.getScholarshipsByIDsStmt,
 		getScholarshipsByInstitutionCodeLikeStmt: q.getScholarshipsByInstitutionCodeLikeStmt,

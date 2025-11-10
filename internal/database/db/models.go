@@ -36,6 +36,7 @@ type FavoriteScholarship struct {
 	UserID        int64        `json:"user_id"`
 	ScholarshipID int64        `json:"scholarship_id"`
 	CreatedAt     sql.NullTime `json:"created_at"`
+	IsReminder    sql.NullBool `json:"is_reminder"`
 }
 
 type OauthLogin struct {

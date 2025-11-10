@@ -25,32 +25,6 @@ type Server struct {
 	cancel context.CancelFunc
 }
 
-type fakeReminderStore struct{}
-
-func (f *fakeReminderStore) GetPendingReminders(ctx context.Context) ([]utils.ReminderRequest, error) {
-	return []utils.ReminderRequest{
-		{
-			Name:            "Test Student 1",
-			Email:           "kheavkienghok@gmail.com",
-			ScholarshipName: "Tech Excellence Award",
-			Deadline:        time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
-			ApplyLink:       "https://test-university.edu/tech",
-		},
-		{
-			Name:            "Test Student 2",
-			Email:           "khievkeanghok@gmail.com",
-			ScholarshipName: "Science Research Grant",
-			Deadline:        time.Date(2025, 11, 15, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
-			ApplyLink:       "https://test-university.edu/science",
-		},
-	}, nil
-}
-
-func (f *fakeReminderStore) MarkReminderSent(ctx context.Context, id int64) error {
-	// No-op for fake
-	return nil
-}
-
 // NewServer creates a new server instance
 func NewServer(port string, db *database.Database) *Server {
 
@@ -73,14 +47,14 @@ func NewServer(port string, db *database.Database) *Server {
 	router.NoRoute(func(c *gin.Context) {
 		utils.JSONIndent(c, http.StatusNotFound, "404 Not Found", nil)
 	})
+
 	// --- START REMINDER CRON HERE ---
 	ctx, cancel := context.WithCancel(context.Background())
-	// store cancel to allow stopping the reminder goroutine when server shuts down
-	// reminderStore := db.Queries
-	reminderStore := &fakeReminderStore{}              // use the fake store for testing
-	utils.StartDailyEmailCheck(ctx, reminderStore,  "0 8 * * *") // at 8:00:00 every day”
+	reminderStore := database.NewReminderStore(db) // pass the Database wrapper
+	// utils.StartDailyEmailCheck(ctx, reminderStore, "") // testing every minute
+	utils.StartDailyEmailCheck(ctx, reminderStore, "0 8 * * *") // at 8:00:00 every day
 	// --- END REMINDER CRON ---
-	// --- END REMINDER CRON ---
+
 	return &Server{
 		router: router,
 		port:   port,
