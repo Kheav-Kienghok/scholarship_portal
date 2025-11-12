@@ -56,6 +56,8 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         EMAIL_VERIFICATION_API_URL: ${{ secrets.EMAIL_VERIFICATION_API_URL }}
         EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+        REMINDER_EMAIL_API_KEY: ${{ secrets.REMINDER_EMAIL_API_KEY }}
+        REMINDER_EMAIL_API_URL: ${{ secrets.REMINDER_EMAIL_API_URL }}
         AWS_REGION: ${{ VARS.AWS_REGION }}
         AWS_BUCKET_NAME: ${{ VARS.AWS_BUCKET_NAME }}
         GIN_MODE: debug
