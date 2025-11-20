@@ -30,6 +30,9 @@ func RegisterUserRoutes(api *gin.RouterGroup, db *sql.DB, queries *importDB.Quer
 	favoriteGroup.Use(middlewares.RequireUserAuth())
 	{
 		favoriteGroup.POST("", favoriteController.AddFavorite)
+		favoriteGroup.PUT("/:scholarship_id", favoriteController.UpdateFavoriteStatus)
+
 		favoriteGroup.DELETE("/:scholarship_id", favoriteController.RemoveFavorite)
+
 	}
 }

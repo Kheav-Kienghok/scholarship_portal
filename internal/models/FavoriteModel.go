@@ -25,3 +25,7 @@ type DeleteFavoriteScholarshipRequest struct {
 	UserID        int32 `json:"user_id" binding:"required"`
 	ScholarshipID int32 `json:"scholarship_id" binding:"required"`
 }
+
+type UpdateFavoriteStatusRequest struct {
+    IsFavorite *bool `json:"is_favorite" binding:"required"`
+}

@@ -173,3 +173,21 @@ func (q *Queries) RemoveFavorite(ctx context.Context, arg RemoveFavoriteParams) 
 	_, err := q.exec(ctx, q.removeFavoriteStmt, removeFavorite, arg.UserID, arg.ScholarshipID)
 	return err
 }
+
+const updateFavoriteStatus = `-- name: UpdateFavoriteStatus :exec
+UPDATE favorite_scholarships
+SET is_favorite = $1
+WHERE user_id = $2
+  AND scholarship_id = $3
+`
+
+type UpdateFavoriteStatusParams struct {
+	IsFavorite    bool  `json:"is_favorite"`
+	UserID        int64 `json:"user_id"`
+	ScholarshipID int64 `json:"scholarship_id"`
+}
+
+func (q *Queries) UpdateFavoriteStatus(ctx context.Context, arg UpdateFavoriteStatusParams) error {
+	_, err := q.exec(ctx, q.updateFavoriteStatusStmt, updateFavoriteStatus, arg.IsFavorite, arg.UserID, arg.ScholarshipID)
+	return err
+}

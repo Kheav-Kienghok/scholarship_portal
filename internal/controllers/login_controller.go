@@ -51,8 +51,8 @@ func (ctrl *LoginController) Login(c *gin.Context) {
 
 	// Compare hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(input.Password)); err != nil {
-		logging.Error("Password mismatch:", err)
-		utils.JSONIndent(c, http.StatusOK, "Incorrect Credential", nil)
+		go logging.Error("Password mismatch:", err)
+		utils.JSONIndent(c, http.StatusUnauthorized, "Incorrect Credential", nil)
 		return
 	}
 

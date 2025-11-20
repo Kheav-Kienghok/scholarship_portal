@@ -191,3 +191,36 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 		Favorites: responses,
 	})
 }
+
+func (ctrl *FavoriteController) UpdateFavoriteStatus(c *gin.Context) {
+
+	userID := ctrl.getUserIDOrAbort(c)
+	if userID == 0 {
+		return
+	}
+
+	var req models.UpdateFavoriteStatusRequest
+	if !utils.BindJSONOrFail(c, &req) {
+		return
+	}
+
+	scholarshipIDStr := c.Param("scholarship_id")
+	scholarshipID, err := strconv.Atoi(scholarshipIDStr)
+	if err != nil {
+		utils.RespondBadRequest(c, "Invalid scholarship ID", nil)
+		return
+	}
+
+	err = ctrl.Queries.UpdateFavoriteStatus(c, db.UpdateFavoriteStatusParams{
+		IsFavorite:    *req.IsFavorite,
+		UserID:        userID,
+		ScholarshipID: int64(scholarshipID),
+	})
+	if err != nil {
+		logging.Error("Failed to update favorite status:", err)
+		utils.RespondInternalError(c, "Failed to update favorite status")
+		return
+	}
+
+	utils.RespondOK(c, "Favorite status updated", nil)
+}

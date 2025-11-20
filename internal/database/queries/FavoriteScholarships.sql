@@ -43,3 +43,9 @@ LEFT JOIN users u
     ON u.id = fs.user_id
 LEFT JOIN scholarships s
     ON s.id = fs.scholarship_id;
+
+-- name: UpdateFavoriteStatus :exec
+UPDATE favorite_scholarships
+SET is_favorite = $1
+WHERE user_id = $2
+  AND scholarship_id = $3;

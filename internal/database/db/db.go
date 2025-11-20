@@ -150,6 +150,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.searchScholarshipsByProgramsStmt, err = db.PrepareContext(ctx, searchScholarshipsByPrograms); err != nil {
 		return nil, fmt.Errorf("error preparing query SearchScholarshipsByPrograms: %w", err)
 	}
+	if q.updateFavoriteStatusStmt, err = db.PrepareContext(ctx, updateFavoriteStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateFavoriteStatus: %w", err)
+	}
 	if q.updateOAuthLoginStmt, err = db.PrepareContext(ctx, updateOAuthLogin); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateOAuthLogin: %w", err)
 	}
@@ -386,6 +389,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing searchScholarshipsByProgramsStmt: %w", cerr)
 		}
 	}
+	if q.updateFavoriteStatusStmt != nil {
+		if cerr := q.updateFavoriteStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateFavoriteStatusStmt: %w", cerr)
+		}
+	}
 	if q.updateOAuthLoginStmt != nil {
 		if cerr := q.updateOAuthLoginStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateOAuthLoginStmt: %w", cerr)
@@ -502,6 +510,7 @@ type Queries struct {
 	removeFavoriteStmt                       *sql.Stmt
 	searchScholarshipsStmt                   *sql.Stmt
 	searchScholarshipsByProgramsStmt         *sql.Stmt
+	updateFavoriteStatusStmt                 *sql.Stmt
 	updateOAuthLoginStmt                     *sql.Stmt
 	updateScholarshipStmt                    *sql.Stmt
 	updateScholarshipJSONBStmt               *sql.Stmt
@@ -557,6 +566,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		removeFavoriteStmt:                       q.removeFavoriteStmt,
 		searchScholarshipsStmt:                   q.searchScholarshipsStmt,
 		searchScholarshipsByProgramsStmt:         q.searchScholarshipsByProgramsStmt,
+		updateFavoriteStatusStmt:                 q.updateFavoriteStatusStmt,
 		updateOAuthLoginStmt:                     q.updateOAuthLoginStmt,
 		updateScholarshipStmt:                    q.updateScholarshipStmt,
 		updateScholarshipJSONBStmt:               q.updateScholarshipJSONBStmt,
