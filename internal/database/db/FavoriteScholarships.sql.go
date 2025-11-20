@@ -102,7 +102,7 @@ SELECT
     s.created_at
 FROM favorite_scholarships f
 JOIN scholarships s ON f.scholarship_id = s.id
-WHERE f.user_id = $1
+WHERE f.user_id = $1 AND f.is_favorite = TRUE
 ORDER BY f.created_at DESC
 `
 
