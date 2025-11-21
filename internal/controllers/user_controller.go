@@ -62,7 +62,7 @@ func (u *UserController) GetProfile(c *gin.Context) {
 			utils.JSONIndent(c, http.StatusNotFound, "User not found", nil)
 			return
 		}
-		logging.Error("[User Controller]: Failed to get user profile: ", err)
+		go logging.Error("[User Controller]: Failed to get user profile: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to fetch user profile", nil)
 		return
 	}
@@ -87,7 +87,7 @@ func (u *UserController) GetProfile(c *gin.Context) {
 func (u *UserController) UpdateProfile(c *gin.Context) {
 	var input models.UpdateUserProfileRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		logging.Error("[User Controller]: Failed to bind update profile input: ", err)
+		go logging.Error("[User Controller]: Failed to bind update profile input: ", err)
 		utils.JSONIndent(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
@@ -110,7 +110,7 @@ func (u *UserController) UpdateProfile(c *gin.Context) {
 	// Start atomic transaction
 	tx, err := u.DB.BeginTx(ctx, nil)
 	if err != nil {
-		logging.Error("[User Controller]: Failed to begin transaction: ", err)
+		go logging.Error("[User Controller]: Failed to begin transaction: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to begin transaction", nil)
 		return
 	}
@@ -121,14 +121,14 @@ func (u *UserController) UpdateProfile(c *gin.Context) {
 	// Update user basic info and student profile atomically
 	updatedProfile, err := u.updateProfileAtomic(ctx, queries, userID, input)
 	if err != nil {
-		logging.Error("[User Controller]: Failed to update profile: ", err)
+		go logging.Error("[User Controller]: Failed to update profile: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to update profile", nil)
 		return
 	}
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		logging.Error("[User Controller]: Failed to commit transaction: ", err)
+		go logging.Error("[User Controller]: Failed to commit transaction: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to commit changes", nil)
 		return
 	}
@@ -264,7 +264,7 @@ func buildUnifiedUserProfileResponse(data db.GetUserWithStudentProfileRow) model
 		var selectMajors []string
 		if data.SelectMajors.Valid {
 			if err := json.Unmarshal(data.SelectMajors.RawMessage, &selectMajors); err != nil {
-				logging.Error("[User Controller]: Failed to unmarshal select majors: ", err)
+				go logging.Error("[User Controller]: Failed to unmarshal select majors: ", err)
 				selectMajors = []string{} // Default to empty array on error
 			}
 		}

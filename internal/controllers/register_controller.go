@@ -99,7 +99,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 
 	user, err := qtx.CreateUser(c, params)
 	if err != nil {
-		logging.Error("DB: Failed to create user:", err)
+		go logging.Error("DB: Failed to create user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -107,7 +107,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	// Generate verification token
 	token, err := generateVerificationToken()
 	if err != nil {
-		logging.Error("Failed to generate verification token:", err)
+		go logging.Error("Failed to generate verification token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -121,14 +121,14 @@ func (r *RegisterController) Register(c *gin.Context) {
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		logging.Error("Failed to save verification token:", err)
+		go logging.Error("Failed to save verification token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
 
 	// Commit transaction first (user + token must be consistent)
 	if err := tx.Commit(); err != nil {
-		logging.Error("Failed to commit transaction:", err)
+		go logging.Error("Failed to commit transaction:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -139,7 +139,7 @@ func (r *RegisterController) Register(c *gin.Context) {
 	// Uncomment this to send link
 	err = utils.SendVerificationEmail(c, user.Email, user.Fullname.String, verificationLink)
 	if err != nil {
-		logging.Error("Failed to send verification email:", err)
+		go logging.Error("Failed to send verification email:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not send verification email", nil)
 		return
 	}
@@ -149,27 +149,6 @@ func (r *RegisterController) Register(c *gin.Context) {
 }
 
 func (r *RegisterController) handleValidationError(c *gin.Context, err error) {
-	// var ve validator.ValidationErrors
-	// if errors.As(err, &ve) {
-	// 	if len(ve) > 0 {
-	// 		fe := ve[0]
-	// 		switch fe.Tag() {
-	// 		case "password":
-	// 			utils.JSONIndent(c, http.StatusBadRequest,
-	// 				"Password must be at least 8 chars long and include both uppercase and lowercase letters", nil)
-	// 		case "required":
-	// 			utils.JSONIndent(c, http.StatusBadRequest,
-	// 				fmt.Sprintf("%s is required", fe.Field()), nil)
-	// 		case "email":
-	// 			utils.JSONIndent(c, http.StatusBadRequest, "Invalid email format", nil)
-	// 		default:
-	// 			utils.JSONIndent(c, http.StatusBadRequest,
-	// 				fmt.Sprintf("Invalid value for field %s", fe.Field()), nil)
-	// 		}
-	// 		return
-	// 	}
-	// }
-
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
 		utils.JSONIndent(c, http.StatusBadRequest, utils.TranslateValidationError(ve), nil)
@@ -227,7 +206,7 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 			utils.JSONIndent(c, http.StatusBadRequest, "Invalid or expired verification token", nil)
 			return
 		}
-		logging.Error("Failed to get verification token:", err)
+		go logging.Error("Failed to get verification token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -247,7 +226,7 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 	// Verify the user
 	err = r.Queries.VerifyUserEmail(c, verification.UserID)
 	if err != nil {
-		logging.Error("Failed to verify user email:", err)
+		go logging.Error("Failed to verify user email:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -255,13 +234,13 @@ func (r *RegisterController) VerifyEmail(c *gin.Context) {
 	// Mark verification as completed
 	err = r.Queries.MarkEmailVerificationAsUsed(c, verification.ID)
 	if err != nil {
-		logging.Error("Failed to mark verification as used:", err)
+		go logging.Error("Failed to mark verification as used:", err)
 	}
 
 	// Fetch the user to generate JWT
 	user, err := r.Queries.GetUserByID(c, verification.UserID)
 	if err != nil {
-		logging.Error("Failed to fetch user:", err)
+		go logging.Error("Failed to fetch user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -323,7 +302,7 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 			utils.JSONIndent(c, http.StatusOK, "If this email is registered and unverified, a verification link will be sent.", nil)
 			return
 		}
-		logging.Error("Failed to get user:", err)
+		go logging.Error("Failed to get user:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -337,7 +316,7 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 	// Check for rate limiting (prevent spam)
 	latestVerification, err := r.Queries.GetLatestVerificationByEmail(c, email)
 	if err != nil && err != sql.ErrNoRows {
-		logging.Error("Failed to get latest verification:", err)
+		go logging.Error("Failed to get latest verification:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -354,14 +333,14 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 	// Delete old unverified tokens for this user
 	err = r.Queries.DeleteExpiredVerifications(c, user.ID)
 	if err != nil {
-		logging.Error("Failed to delete old verifications:", err)
+		go logging.Error("Failed to delete old verifications:", err)
 		// Continue anyway
 	}
 
 	// Generate new verification token
 	token, err := generateVerificationToken()
 	if err != nil {
-		logging.Error("Failed to generate verification token:", err)
+		go logging.Error("Failed to generate verification token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}
@@ -374,7 +353,7 @@ func (r *RegisterController) ResendVerification(c *gin.Context) {
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		logging.Error("Failed to save verification token:", err)
+		go logging.Error("Failed to save verification token:", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Something went wrong", nil)
 		return
 	}

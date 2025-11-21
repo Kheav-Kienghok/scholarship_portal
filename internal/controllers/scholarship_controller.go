@@ -109,7 +109,7 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		utils.JSONIndent(c, http.StatusBadRequest, "DeadlineEnd is required", nil)
 		return
 	}
-	
+
 	// Save to DB
 	scholarship, err := ctrl.Queries.CreateScholarship(c, db.CreateScholarshipParams{
 		Title:           input.Title,
@@ -124,7 +124,7 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		Categories:      utils.ToNullRawMessage(input.Categories),
 	})
 	if err != nil {
-		logging.Error("Failed to create scholarship: ", err)
+		go logging.Error("Failed to create scholarship: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Failed to perform the operation", nil)
 		return
 	}
@@ -178,7 +178,7 @@ func (cr *ScholarshipController) GetScholarshipByID(c *gin.Context) {
 	if scholarship.PhotoUrl.Valid && scholarship.PhotoUrl.String != "" {
 		url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, scholarship.PhotoUrl.String, storage.S3Client)
 		if err != nil {
-			logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
+			go logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
 			response.PhotoURL = nil // or keep original key
 		} else {
 			response.PhotoURL = &url
@@ -258,7 +258,7 @@ func (ctrl *ScholarshipController) DeleteScholarship(c *gin.Context) {
 
 	err = ctrl.Queries.DeleteScholarshipByID(c, int32(id))
 	if err != nil {
-		logging.Error("Failed to delete scholarship: ", err)
+		go logging.Error("Failed to delete scholarship: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Could not delete scholarship", err.Error())
 		return
 	}
@@ -368,7 +368,7 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 	// --- Execute update ---
 	scholarship, err := ctrl.Queries.UpdateScholarship(c, updateParams)
 	if err != nil {
-		logging.Error("Failed to update scholarship: ", err)
+		go logging.Error("Failed to update scholarship: ", err)
 		utils.JSONIndent(c, http.StatusInternalServerError, "Internal Server Error", nil)
 		return
 	}
@@ -384,7 +384,7 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 	if scholarship.PhotoUrl.Valid && scholarship.PhotoUrl.String != "" {
 		url, err := utils.GenerateScholarshipLogoURL(storage.BucketName, scholarship.PhotoUrl.String, storage.S3Client)
 		if err != nil {
-			logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
+			go logging.Error("Failed to generate presigned URL for scholarship ", scholarship.ID, ": ", err)
 			response.PhotoURL = nil // or keep original key
 		} else {
 			response.PhotoURL = &url

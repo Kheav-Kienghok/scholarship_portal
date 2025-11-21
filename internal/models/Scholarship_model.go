@@ -41,7 +41,7 @@ type CreateScholarshipRequest struct {
 	InstitutionInfo json.RawMessage `form:"institution_info" json:"institution_info"`
 	Requirements    json.RawMessage `form:"requirements" json:"requirements"`
 	ExtraNotes      *string         `form:"extra_notes" json:"extra_notes"`
-	DeadlineEnd     *string         `form:"deadline_end" json:"deadline_end"`
+	DeadlineEnd     *string         `form:"deadline_end" json:"deadline_end" required:"true"`
 	OfficialLink    *string         `form:"official_link" json:"official_link"`
 	Categories      json.RawMessage `form:"categories" json:"categories"`
 	PhotoURL        *string         `form:"photo_url" json:"photo_url"`

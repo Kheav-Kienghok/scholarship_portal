@@ -66,7 +66,7 @@ func (ctrl *FavoriteController) checkActionLimit(c *gin.Context, userID int64, a
 	}
 
 	if remaining <= 2 {
-		logging.Warn(fmt.Sprintf("User %d approaching rate limit for %s: %d remaining", userID, action, remaining))
+		go logging.Warn(fmt.Sprintf("User %d approaching rate limit for %s: %d remaining", userID, action, remaining))
 	}
 
 	ctrl.ActionLimiter.Increment(key)
@@ -138,7 +138,7 @@ func (ctrl *FavoriteController) RemoveFavorite(c *gin.Context) {
 		ScholarshipID: int64(scholarshipID),
 	})
 	if err != nil {
-		logging.Error("Failed to remove favorite:", err)
+		go logging.Error("Failed to remove favorite:", err)
 		utils.RespondInternalError(c, "Failed to remove favorite")
 		return
 	}
@@ -157,7 +157,7 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 	// Fetch favorite entries
 	favorites, err := ctrl.Queries.ListFavoritesByUser(c, userID)
 	if err != nil {
-		logging.Error("Failed to fetch favorites: ", err)
+		go logging.Error("Failed to fetch favorites: ", err)
 		utils.RespondInternalError(c, "Failed to fetch favorites")
 		return
 	}
@@ -176,7 +176,7 @@ func (ctrl *FavoriteController) ListFavorites(c *gin.Context) {
 	// Batch fetch scholarships
 	dbScholarships, err := ctrl.Queries.GetScholarshipsByIDs(c, scholarshipIDs)
 	if err != nil {
-		logging.Error("Failed to fetch scholarships: ", err)
+		go logging.Error("Failed to fetch scholarships: ", err)
 		utils.RespondInternalError(c, "Failed to fetch scholarships")
 		return
 	}
@@ -217,7 +217,7 @@ func (ctrl *FavoriteController) UpdateFavoriteStatus(c *gin.Context) {
 		ScholarshipID: int64(scholarshipID),
 	})
 	if err != nil {
-		logging.Error("Failed to update favorite status:", err)
+		go logging.Error("Failed to update favorite status:", err)
 		utils.RespondInternalError(c, "Failed to update favorite status")
 		return
 	}

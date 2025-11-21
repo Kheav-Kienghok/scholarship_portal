@@ -82,7 +82,7 @@ func validateAdminOTP(admin *db.Admin, otp string) error {
 func (ctrl *AdminController) AdminLogin(c *gin.Context) {
 	var loginInput models.AdminLoginInput
 	if err := c.ShouldBindJSON(&loginInput); err != nil {
-		logging.Error("Failed to bind login input: ", err)
+		go logging.Error("Failed to bind login input: ", err)
 		utils.RespondBadRequest(c, "Invalid input", err.Error())
 		return
 	}
@@ -126,7 +126,7 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 
 	var otpInput models.AdminOTPInput
 	if err := c.ShouldBindJSON(&otpInput); err != nil {
-		logging.Error("Failed to bind OTP input: ", err)
+		go logging.Error("Failed to bind OTP input: ", err)
 		utils.RespondBadRequest(c, "Invalid input", err.Error())
 		return
 	}
@@ -165,7 +165,7 @@ func (ctrl *AdminController) VerifyAdminOTP(c *gin.Context) {
 			utils.RespondTooManyRequests(c, "Too many OTP attempts. Try again later", int(ctrl.OTPStore.Window().Seconds()))
 			return
 		}
-		logging.Error(fmt.Sprintf("[OTP]: %s", err.Error()))
+		go logging.Error(fmt.Sprintf("[OTP]: %s", err.Error()))
 		utils.RespondUnauthorized(c, "Invalid OTP")
 		return
 	}
@@ -249,7 +249,7 @@ func (ctrl *AdminController) Verify2FAForAdmin(c *gin.Context) {
 	}
 
 	if err := validateAdminOTP(admin, input.OTP); err != nil {
-		logging.Error("Failed to validate OTP: ", err)
+		go logging.Error("Failed to validate OTP: ", err)
 		utils.RespondUnauthorized(c, err.Error())
 		return
 	}
