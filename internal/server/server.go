@@ -32,8 +32,16 @@ func NewServer(port string, db *database.Database) *Server {
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), logging.GinLogger(), middlewares.RequestLogger())
 
+	// allow up to 100 MB multipart form in memory before using temp files
+	router.MaxMultipartMemory = 100 << 20 // 100 MB
+
 	// Enable gzip compression
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
+
+	router.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 100<<20)
+		c.Next()
+	})
 
 	// Initialize validator
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {

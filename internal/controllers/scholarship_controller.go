@@ -305,7 +305,7 @@ func (ctrl *ScholarshipController) UpdateScholarship(c *gin.Context) {
 		}
 
 		// Handle optional photo upload
-		file, handler, err := c.Request.FormFile("photo")
+		file, handler, err := c.Request.FormFile("photo_url")
 		if err == nil {
 			defer file.Close()
 			titleName := utils.SanitizeString(input.Title)
