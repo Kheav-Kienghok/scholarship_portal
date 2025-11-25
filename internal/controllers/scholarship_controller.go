@@ -66,7 +66,7 @@ func (ctrl *ScholarshipController) CreateScholarship(c *gin.Context) {
 		}
 
 		// Handle file upload
-		file, handler, err := c.Request.FormFile("photo")
+		file, handler, err := c.Request.FormFile("photo_url")
 		if err == nil {
 			defer file.Close()
 
