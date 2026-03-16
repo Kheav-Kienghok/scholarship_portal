@@ -10,7 +10,7 @@ A web application for managing student scholarship profiles, applications, and a
 - Admin and student roles
 - RESTful API with Swagger documentation
 
-## Tech Stack
+## Tech Stack 
 
 - Go (Gin framework)
 - PostgreSQL
